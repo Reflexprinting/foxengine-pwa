@@ -1,12 +1,18 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<title>FoxEngine</title>
-<meta http-equiv="refresh" content="0; url=/ma-carte">
-<link rel="canonical" href="https://app.my-foxengine.com/ma-carte">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FoxEngine — Ma Carte</title>
+  <script>
+    // Préserver le code client si présent dans l'URL
+    const params = window.location.search;
+    window.location.replace('/ma-carte.html' + params);
+  </script>
 </head>
 <body>
-<p>Redirection vers <a href="/ma-carte">/ma-carte</a>…</p>
+  <noscript>
+    <p>Activez JavaScript ou rendez-vous sur <a href="/ma-carte.html">/ma-carte.html</a></p>
+  </noscript>
 </body>
 </html>

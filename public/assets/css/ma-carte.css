@@ -1,4 +1,8 @@
-/* FoxEngine PWA — Ma Carte */
+/* FoxEngine PWA — Ma Carte
+   Variables CSS (--primary, --secondary, etc.) injectées dynamiquement
+   par theme.js depuis la boutique du client.
+*/
+
 :root {
   --primary:   #0B3D91;
   --secondary: #F26A21;
@@ -18,75 +22,433 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { font-family: var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
 
-.app { max-width: 480px; margin: 0 auto; padding: 16px; min-height: 100vh; }
+html, body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
 
-.state { display: none; padding: 32px 16px; text-align: center; }
+.app { max-width: 540px; margin: 0 auto; padding: 12px; }
+
+/* ── ÉTATS ───────────────────────────────────────────── */
+.state { display: none; }
 .state.active { display: block; }
-.state h2 { font-size: 18px; margin-bottom: 8px; color: var(--primary); }
-.state p { font-size: 14px; color: var(--muted); line-height: 1.5; }
-.spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 24px auto; }
+
+.loader { text-align: center; padding: 60px 20px; }
+.spinner {
+  width: 44px; height: 44px;
+  border: 4px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  margin: 0 auto 18px;
+  animation: spin .9s linear infinite;
+}
 @keyframes spin { to { transform: rotate(360deg); } }
+.loader p { color: var(--muted); font-size: 14px; }
 
-.shop-header { display: flex; align-items: center; gap: 12px; background: var(--surface); border-radius: var(--r); padding: 12px 14px; box-shadow: var(--shadow); margin-bottom: 12px; }
-.shop-logo { width: 48px; height: 48px; border-radius: 10px; object-fit: contain; background: #FFF; flex-shrink: 0; border: 1px solid var(--border); }
+.error-box {
+  background: var(--surface); border-radius: var(--r);
+  padding: 36px 24px; text-align: center; box-shadow: var(--shadow);
+  margin-top: 40px;
+}
+.error-icon {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--red); color: #fff;
+  font-size: 32px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 16px;
+}
+.error-box h2 { font-size: 18px; margin-bottom: 8px; }
+.error-box p { color: var(--muted); font-size: 14px; }
+
+/* ── HEADER BOUTIQUE ─────────────────────────────────── */
+.shop-header {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface); padding: 12px;
+  border-radius: var(--r); box-shadow: var(--shadow);
+  margin-bottom: 12px;
+}
+.shop-logo {
+  width: 56px; height: 56px; border-radius: var(--r-sm);
+  object-fit: contain; background: #fff;
+  border: 1px solid var(--border); flex-shrink: 0;
+}
+.shop-logo[hidden] { display: none !important; }
+.shop-logo-fallback {
+  width: 56px; height: 56px; border-radius: var(--r-sm);
+  background: #f7f7f7; border: 1px dashed #c8c8c8;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center; padding: 4px; flex-shrink: 0;
+  font-size: 9px; line-height: 1.2;
+  color: #888; font-style: italic;
+}
+.shop-logo-fallback[hidden] { display: none !important; }
 .shop-info { flex: 1; min-width: 0; }
-.shop-name { font-size: 15px; font-weight: 700; color: var(--primary); line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.shop-city { font-size: 12px; color: var(--muted); margin-top: 2px; }
-.help-btn { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); color: var(--primary); font-weight: 700; cursor: pointer; flex-shrink: 0; }
+.shop-name {
+  font-size: 17px; font-weight: 700; color: var(--primary);
+  line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.shop-city { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.help-btn {
+  height: 32px; padding: 0 12px; border-radius: 16px;
+  background: var(--bg); border: 1px solid var(--border);
+  font-size: 13px; font-weight: 600; color: var(--primary);
+  cursor: pointer; flex-shrink: 0;
+  letter-spacing: 0.2px;
+  transition: background 0.15s ease;
+}
+.help-btn:hover { background: var(--surface); }
+.help-btn:active { transform: scale(0.96); }
 
-.card { background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: var(--r); padding: 20px; color: #FFF; box-shadow: var(--shadow); margin-bottom: 14px; }
-.card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
-.card-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; }
-.card-name { font-size: 20px; font-weight: 700; margin-top: 4px; }
-.card-code { font-family: var(--mono); font-size: 13px; opacity: 0.9; margin-top: 4px; letter-spacing: 0.05em; }
-.qr-wrap { background: #FFF; padding: 8px; border-radius: 8px; display: inline-block; }
-.qr-wrap canvas, .qr-wrap img { display: block; }
+/* ── CARTE FIDÉLITÉ ──────────────────────────────────── */
+.card {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  border-radius: var(--r); padding: 18px;
+  margin-bottom: 14px; color: #fff; box-shadow: var(--shadow);
+}
+.card-header { margin-bottom: 10px; }
+.card-label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+  opacity: 0.85; font-weight: 600;
+}
+.card-body { text-align: center; }
+.card-name {
+  font-size: 19px; font-weight: 700; margin: 4px 0 2px;
+}
+.card-code {
+  font-family: var(--mono); font-size: 13px; opacity: 0.9;
+  margin-bottom: 14px;
+}
+/* Code-barres CODE128 — scan douchette caisse (1D linéaire) */
+.barcode-wrapper {
+  display: block;
+  background: #fff;
+  border-radius: var(--r-sm);
+  padding: 12px 10px;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 320px;
+  box-sizing: border-box;
+  text-align: center;
+}
+.card-barcode {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 160px;
+}
 
-.fidelity { background: var(--surface); border-radius: var(--r); padding: 16px; box-shadow: var(--shadow); margin-bottom: 14px; }
-.fidelity-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
-.fidelity-title { font-size: 13px; font-weight: 700; color: var(--primary); }
-.fidelity-amount { font-size: 18px; font-weight: 700; color: var(--text); }
-.fidelity-amount small { font-size: 12px; color: var(--muted); font-weight: 500; }
-.progress { height: 10px; background: var(--border); border-radius: 999px; overflow: hidden; }
-.progress-bar { height: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary)); border-radius: 999px; transition: width 0.6s ease; }
-.fidelity-msg { font-size: 12px; color: var(--muted); margin-top: 8px; text-align: center; }
-.fidelity-msg strong { color: var(--secondary); }
+/* Anciennes classes QR conservées au cas où — qrcode.min.js reste présent
+   mais n'est plus utilisé pour la carte principale */
+.qr-wrapper {
+  display: flex; justify-content: center;
+  background: #fff; border-radius: var(--r-sm);
+  padding: 14px; margin: 0 auto;
+  width: fit-content; min-width: 200px;
+}
+.qr-canvas {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 180px; min-width: 180px;
+}
+.qr-canvas img,
+.qr-canvas canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+.card-hint {
+  font-size: 12px; opacity: 0.85; margin-top: 12px;
+}
 
-.section { background: var(--surface); border-radius: var(--r); padding: 14px; box-shadow: var(--shadow); margin-bottom: 14px; }
-.section-title { font-size: 12px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+/* ── SECTIONS GÉNÉRIQUES ─────────────────────────────── */
+.section { margin-bottom: 16px; }
+.section-title {
+  font-size: 13px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  text-align: center; margin-bottom: 10px;
+}
 
-.bon { background: #FFF7ED; border: 1.5px solid var(--orange); border-radius: var(--r-sm); padding: 12px; margin-bottom: 8px; }
-.bon-amount { font-size: 22px; font-weight: 700; color: var(--orange); }
-.bon-meta { font-size: 11px; color: var(--muted); margin-top: 4px; font-family: var(--mono); }
-.empty { font-size: 13px; color: var(--muted); text-align: center; padding: 12px; }
+/* ── OFFRES (remontées) ──────────────────────────────── */
+.offres-section { margin-bottom: 16px; }
+.offres-block {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.offre {
+  background: var(--surface); border-radius: var(--r);
+  padding: 12px 14px; box-shadow: var(--shadow);
+  border-left: 4px solid var(--primary);
+  font-size: 14px; line-height: 1.4;
+}
+.offre.offre-promo  { border-left-color: var(--red);    }
+.offre.offre-vip    { border-left-color: var(--orange); }
+.offre.offre-info   { border-left-color: var(--primary); }
+.offre-icon {
+  display: inline-block; margin-right: 6px; font-weight: 700;
+}
+.offre-promo .offre-icon { color: var(--red); }
+.offre-vip   .offre-icon { color: var(--orange); }
+.offre-info  .offre-icon { color: var(--primary); }
 
-.passage { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+/* ── FIDÉLITÉ ────────────────────────────────────────── */
+.fidelity-section {
+  background: var(--surface); border-radius: var(--r);
+  padding: 14px 16px; margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+.fidelity-amounts {
+  display: flex; align-items: baseline; justify-content: center;
+  gap: 8px; margin: 8px 0;
+}
+.fid-amount {
+  font-size: 26px; font-weight: 700; color: var(--primary);
+}
+.fid-seuil { font-size: 14px; color: var(--muted); }
+.fid-bar-wrap {
+  height: 10px; background: var(--border); border-radius: 5px;
+  overflow: hidden; margin: 8px 0;
+}
+.fid-bar {
+  height: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary));
+  width: 0%; border-radius: 5px; transition: width 0.6s ease;
+}
+.fid-msg {
+  font-size: 13px; color: var(--text); text-align: center;
+  margin-top: 8px; line-height: 1.4;
+}
+.fid-msg strong { color: var(--primary); font-weight: 700; }
+
+/* ── BONS D'ACHAT — CLIQUABLES ───────────────────────── */
+.bons-list { display: flex; flex-direction: column; gap: 8px; }
+.bon {
+  background: var(--surface); border-radius: var(--r);
+  padding: 14px 16px; box-shadow: var(--shadow);
+  border: 2px solid var(--green);
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease;
+  position: relative;
+}
+.bon:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,.08); }
+.bon:active { transform: scale(0.98); }
+.bon-amount {
+  font-size: 24px; font-weight: 700; color: var(--green);
+}
+.bon-meta {
+  display: flex; flex-direction: column; align-items: flex-end;
+  font-size: 11px; color: var(--muted); text-align: right;
+  flex: 1; margin-left: 12px; gap: 2px;
+}
+.bon-cta {
+  display: inline-flex; align-items: center;
+  font-size: 11px; font-weight: 600; color: var(--primary);
+  margin-top: 2px;
+}
+.bon-cta::after {
+  content: "›"; margin-left: 4px; font-size: 14px;
+}
+.empty {
+  background: var(--surface); border-radius: var(--r-sm);
+  padding: 16px; text-align: center; color: var(--muted);
+  font-size: 13px;
+}
+
+/* ── PASSAGES ────────────────────────────────────────── */
+.passages-list {
+  background: var(--surface); border-radius: var(--r);
+  box-shadow: var(--shadow); overflow: hidden;
+}
+.passage {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; border-bottom: 1px solid var(--border);
+}
 .passage:last-child { border-bottom: none; }
-.passage-date { font-size: 12px; color: var(--muted); }
-.passage-amount { font-size: 14px; font-weight: 700; }
+.passage-date { font-size: 13px; font-weight: 500; color: var(--text); }
+.passage-amount { font-weight: 700; font-size: 14px; }
 .passage-amount.positive { color: var(--green); }
 .passage-amount.negative { color: var(--red); }
 
-.info-row { display: flex; gap: 8px; padding: 6px 0; font-size: 13px; }
-.info-row strong { min-width: 80px; color: var(--primary); font-weight: 600; }
-.info-promo { background: #FEF3C7; border-radius: var(--r-sm); padding: 10px 12px; font-size: 13px; color: #92400E; margin-top: 8px; }
-
-.footer { text-align: center; font-size: 11px; color: var(--muted); padding: 16px 0; }
-.footer .updated { font-family: var(--mono); }
-
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
-.modal-overlay.open { display: flex; }
-.modal { background: var(--surface); border-radius: var(--r); padding: 20px; max-width: 420px; width: 100%; max-height: 85vh; overflow-y: auto; }
-.modal h3 { color: var(--primary); margin-bottom: 12px; font-size: 16px; }
-.modal p { font-size: 13px; line-height: 1.5; margin-bottom: 8px; }
-.modal-close { margin-top: 14px; width: 100%; padding: 10px; background: var(--primary); color: #FFF; border: none; border-radius: var(--r-sm); font-weight: 700; cursor: pointer; }
-
-@media (min-width: 600px) {
-  .app { padding: 24px; }
+/* ── INFOS HORAIRES ──────────────────────────────────── */
+.infos-block {
+  background: var(--surface); border-radius: var(--r);
+  padding: 12px 14px; box-shadow: var(--shadow);
+  display: flex; flex-direction: column; gap: 6px;
 }
-@media (max-width: 360px) {
-  .card-name { font-size: 18px; }
-  .fidelity-amount { font-size: 16px; }
+.info-row {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 13px; padding: 4px 0;
+}
+.info-row strong { color: var(--text); font-weight: 600; }
+.info-row span { color: var(--muted); }
+
+/* ── DATE MAJ ────────────────────────────────────────── */
+.updated {
+  text-align: center; font-size: 11px; color: var(--muted);
+  margin-top: 16px; padding: 8px;
+}
+
+/* ── MODALES (commun) ────────────────────────────────── */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55);
+  align-items: center; justify-content: center;
+  z-index: 1000; padding: 16px;
+  animation: fadeIn 0.18s ease;
+}
+.modal-overlay.open { display: flex; }
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.modal {
+  background: var(--surface); border-radius: var(--r);
+  padding: 24px 22px; max-width: 420px; width: 100%;
+  position: relative; box-shadow: 0 18px 60px rgba(0,0,0,.25);
+  animation: slideUp 0.22s ease;
+  max-height: 92vh; overflow-y: auto;
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.modal-close {
+  position: absolute; top: 8px; right: 12px;
+  background: none; border: none; font-size: 28px; line-height: 1;
+  cursor: pointer; color: var(--muted); padding: 4px 8px;
+}
+.modal-close:hover { color: var(--text); }
+.modal h3 {
+  font-size: 17px; margin-bottom: 14px; color: var(--primary);
+  padding-right: 28px;
+}
+.help-list { list-style: none; padding: 0; }
+.help-list li {
+  padding: 6px 0; font-size: 14px; line-height: 1.5;
+}
+.help-list strong { color: var(--primary); }
+
+/* ── MODAL AIDE ENRICHIE — instructions par OS ───────── */
+.modal-help { max-width: 480px; }
+.help-section {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.help-section:last-child { border-bottom: none; }
+.help-section h4 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 8px;
+}
+.help-section p {
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0 0 8px;
+  color: var(--text);
+}
+.help-section ol.help-list {
+  list-style: decimal inside;
+  padding-left: 4px;
+}
+.help-section ol.help-list li {
+  padding: 4px 0;
+}
+.help-section-fallback {
+  background: #fff8e6;
+  border: 1px solid #f3d27c;
+  border-radius: var(--r-sm);
+  padding: 14px 16px;
+  margin-top: 8px;
+}
+.help-section-fallback h4 {
+  color: #8a5a00;
+}
+
+/* ── MODAL ACCUEIL PREMIÈRE VISITE ───────────────────── */
+.modal-welcome { text-align: center; max-width: 420px; }
+.modal-welcome h3 {
+  font-size: 18px; margin-bottom: 12px;
+  color: var(--primary); padding-right: 28px;
+  text-align: center;
+}
+.welcome-text {
+  font-size: 14px; line-height: 1.55;
+  color: var(--text); margin: 0 0 20px;
+  text-align: center;
+}
+.welcome-actions {
+  display: flex; flex-direction: column; gap: 10px;
+}
+.welcome-actions .btn-primary,
+.welcome-actions .btn-secondary {
+  width: 100%; padding: 12px 16px;
+  border-radius: var(--r-sm);
+  font-size: 14px; font-weight: 600;
+  cursor: pointer; border: 1px solid transparent;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+.welcome-actions .btn-primary {
+  background: var(--primary); color: #fff;
+}
+.welcome-actions .btn-primary:hover { opacity: 0.92; }
+.welcome-actions .btn-primary:active { transform: scale(0.98); }
+.welcome-actions .btn-secondary {
+  background: var(--bg); color: var(--text);
+  border-color: var(--border);
+}
+.welcome-actions .btn-secondary:hover { background: var(--surface); }
+.welcome-actions .btn-secondary:active { transform: scale(0.98); }
+
+/* ── MODAL BON D'ACHAT — pensée caisse ───────────────── */
+.modal-bon { text-align: center; max-width: 460px; }
+.bon-modal-label {
+  font-size: 12px; color: var(--muted); text-transform: uppercase;
+  letter-spacing: 1.5px; font-weight: 600; margin-top: 4px;
+}
+.bon-modal-amount {
+  font-size: 44px; font-weight: 700; color: var(--green);
+  margin: 6px 0 18px; line-height: 1;
+}
+.bon-modal-barcode-wrap {
+  background: #fff; border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 14px 8px;
+  margin: 0 auto 12px; display: flex; justify-content: center;
+  max-width: 100%; overflow-x: auto;
+}
+.bon-modal-barcode-wrap svg {
+  display: block; max-width: 100%; height: auto;
+}
+.bon-modal-code {
+  font-family: var(--mono); font-size: 14px; font-weight: 600;
+  color: var(--text); margin-bottom: 14px;
+  word-break: break-all;
+}
+.bon-modal-meta {
+  display: flex; justify-content: space-around; gap: 12px;
+  background: var(--bg); border-radius: var(--r-sm);
+  padding: 10px 12px; margin-bottom: 12px;
+  font-size: 12px;
+}
+.bon-modal-meta > div {
+  display: flex; flex-direction: column; gap: 2px;
+}
+.bon-modal-meta span {
+  color: var(--muted); text-transform: uppercase;
+  font-size: 10px; letter-spacing: 0.5px;
+}
+.bon-modal-meta strong { color: var(--text); font-size: 13px; }
+.bon-modal-hint {
+  font-size: 12px; color: var(--muted);
+  font-style: italic;
+}
+
+/* ── RESPONSIVE ──────────────────────────────────────── */
+@media (max-width: 380px) {
+  .app { padding: 8px; }
+  .shop-name { font-size: 15px; }
+  .fid-amount { font-size: 22px; }
+  .bon-amount { font-size: 20px; }
+  .bon-modal-amount { font-size: 36px; }
+  .modal { padding: 20px 16px; }
 }

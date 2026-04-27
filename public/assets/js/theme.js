@@ -1,5 +1,7 @@
 // FoxEngine PWA — Thème dynamique
 // Applique couleurs boutique sur les variables CSS — aucune couleur en dur dans le rendu.
+// Note : le logo boutique est désormais géré exclusivement par renderShop()
+// dans ma-carte.js (validation stricte + fallback discret + log si absent).
 
 window.FoxTheme = {
   apply(boutique) {
@@ -10,8 +12,5 @@ window.FoxTheme = {
 
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta && boutique.couleurPrimaire) meta.setAttribute('content', boutique.couleurPrimaire);
-
-    const logoEl = document.getElementById('shop-logo');
-    if (logoEl && boutique.logoUrl) logoEl.src = boutique.logoUrl;
   }
 };

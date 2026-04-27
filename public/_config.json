@@ -1,0 +1,6 @@
+{
+  "wixApiBase": "https://www.my-foxengine.com/_functions",
+  "appBaseUrl": "https://app.my-foxengine.com",
+  "version": "phase2.1-polish-14",
+  "version_date": "2026-04-27"
+}

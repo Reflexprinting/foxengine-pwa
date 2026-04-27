@@ -1,15 +1,33 @@
 {
-  "name": "Ma Carte",
+  "name": "Ma Carte FoxEngine",
   "short_name": "Ma Carte",
-  "description": "Carte de fidélité FoxEngine",
-  "start_url": "/ma-carte",
+  "description": "Carte de fidélité numérique",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "theme_color": "#0B3D91",
   "background_color": "#0B3D91",
+  "lang": "fr",
+  "dir": "ltr",
+  "prefer_related_applications": false,
   "icons": [
-    { "src": "/assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    {
+      "src": "/assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }

@@ -1,108 +1,205 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0B3D91">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Ma Carte">
-<title>Ma Carte de fidélité</title>
-<link rel="manifest" href="/manifest.webmanifest">
-<link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/icon-192.png">
-<link rel="stylesheet" href="/assets/css/ma-carte.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0B3D91">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Ma Carte">
+  <title>Ma Carte de fidélité</title>
+
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/icon-192.png">
+
+  <link rel="stylesheet" href="/assets/css/ma-carte.css">
 </head>
 <body>
 
-<div class="app">
+  <div class="app">
 
-  <div id="state-loading" class="state active">
-    <div class="spinner"></div>
-    <h2>Chargement de votre carte…</h2>
-    <p>Quelques secondes seulement.</p>
-  </div>
-
-  <div id="state-error" class="state">
-    <h2>Carte indisponible</h2>
-    <p id="error-msg">Une erreur est survenue.</p>
-  </div>
-
-  <div id="state-ready" class="state">
-
-    <div class="shop-header">
-      <img id="shop-logo" class="shop-logo" alt="" src="/assets/img/fox-engine-logo.png">
-      <div class="shop-info">
-        <div id="shop-name" class="shop-name">—</div>
-        <div id="shop-city" class="shop-city">—</div>
+    <!-- ÉTAT 1 : LOADING -->
+    <section id="state-loading" class="state active">
+      <div class="loader">
+        <div class="spinner"></div>
+        <p>Chargement de votre carte…</p>
       </div>
-      <button id="help-btn" class="help-btn" aria-label="Aide">?</button>
-    </div>
+    </section>
 
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="card-label">Carte de fidélité</div>
-          <div id="card-name" class="card-name">—</div>
-          <div id="card-code" class="card-code">—</div>
+    <!-- ÉTAT 2 : ERREUR -->
+    <section id="state-error" class="state">
+      <div class="error-box">
+        <div class="error-icon">!</div>
+        <h2>Carte indisponible</h2>
+        <p id="error-msg">Impossible de charger votre carte. Réessayez plus tard.</p>
+      </div>
+    </section>
+
+    <!-- ÉTAT 3 : CARTE PRÊTE -->
+    <section id="state-ready" class="state">
+
+      <!-- HEADER BOUTIQUE -->
+      <header class="shop-header">
+        <img id="shop-logo" alt="Logo boutique" class="shop-logo">
+        <div id="shop-logo-fallback" class="shop-logo-fallback" role="status" aria-live="polite" hidden>Logo boutique non configuré</div>
+        <div class="shop-info">
+          <h1 id="shop-name" class="shop-name"></h1>
+          <p id="shop-city" class="shop-city"></p>
+        </div>
+        <button id="help-btn" class="help-btn" aria-label="Aide" type="button">Aide</button>
+      </header>
+
+      <!-- CARTE DE FIDÉLITÉ -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-label">Carte de fidélité</span>
+        </div>
+        <div class="card-body">
+          <div class="card-name" id="card-name"></div>
+          <div class="card-code" id="card-code"></div>
+
+          <div class="barcode-wrapper">
+            <svg id="card-barcode" class="card-barcode" role="img" aria-label="Code-barres carte fidélité"></svg>
+          </div>
+
+          <p class="card-hint">Présentez ce code-barres en caisse</p>
         </div>
       </div>
-      <div style="display:flex;justify-content:center;">
-        <div id="qr-canvas" class="qr-wrap"></div>
-      </div>
-    </div>
 
-    <div class="fidelity">
-      <div class="fidelity-row">
-        <div class="fidelity-title">Progression vers votre prochain bon</div>
-      </div>
-      <div class="fidelity-row" style="align-items:baseline;">
-        <div class="fidelity-amount"><span id="fid-amount">0,00 €</span></div>
-        <small id="fid-seuil" style="color:var(--muted);">/ 0,00 €</small>
-      </div>
-      <div class="progress"><div id="fid-bar" class="progress-bar" style="width:0%;"></div></div>
-      <div id="fid-msg" class="fidelity-msg">—</div>
-    </div>
+      <!-- OFFRES BOUTIQUE — REMONTÉES sous la carte, avant la fidélité -->
+      <section id="offres-section" class="offres-section" style="display:none;">
+        <h2 class="section-title">Offres et infos</h2>
+        <div id="offres-block" class="offres-block"></div>
+      </section>
 
-    <div class="section">
-      <div class="section-title">Mes bons d'achat</div>
-      <div id="bons-list"></div>
-    </div>
+      <!-- PROGRESSION FIDÉLITÉ -->
+      <section class="fidelity-section">
+        <h2 class="section-title">Progression vers votre prochain bon</h2>
+        <div class="fidelity-amounts">
+          <span id="fid-amount" class="fid-amount"></span>
+          <span id="fid-seuil" class="fid-seuil"></span>
+        </div>
+        <div class="fid-bar-wrap">
+          <div id="fid-bar" class="fid-bar"></div>
+        </div>
+        <p id="fid-msg" class="fid-msg"></p>
+      </section>
 
-    <div class="section">
-      <div class="section-title">Mes derniers passages</div>
-      <div id="passages-list"></div>
-    </div>
+      <!-- BONS D'ACHAT — CLIQUABLES -->
+      <section class="section">
+        <h2 class="section-title">Mes bons d'achat</h2>
+        <div id="bons-list" class="bons-list"></div>
+      </section>
 
-    <div id="infos-section" class="section" style="display:none;">
-      <div class="section-title">Informations boutique</div>
-      <div id="infos-block"></div>
-    </div>
+      <!-- DERNIERS PASSAGES -->
+      <section class="section">
+        <h2 class="section-title">Mes derniers passages</h2>
+        <div id="passages-list" class="passages-list"></div>
+      </section>
 
-    <div class="footer">
-      Mise à jour : <span id="updated-at" class="updated">—</span><br>
-      <small>Carte fidélité propulsée par FoxEngine</small>
-    </div>
+      <!-- HORAIRES BOUTIQUE -->
+      <section id="infos-section" class="section" style="display:none;">
+        <h2 class="section-title">Informations boutique</h2>
+        <div id="infos-block" class="infos-block"></div>
+      </section>
+
+      <!-- DATE MAJ -->
+      <footer class="updated">
+        Mis à jour le <span id="updated-at"></span>
+      </footer>
+
+    </section>
 
   </div>
 
-</div>
+  <!-- MODAL AIDE -->
+  <div id="help-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="help-title">
+    <div class="modal modal-help">
+      <button id="help-close" class="modal-close" aria-label="Fermer" type="button">&times;</button>
+      <h3 id="help-title">Comment utiliser ma carte&nbsp;?</h3>
 
-<div id="help-modal" class="modal-overlay" role="dialog" aria-modal="true">
-  <div class="modal">
-    <h3>Aide — Ma carte de fidélité</h3>
-    <p><strong>Comment l'utiliser ?</strong> Présentez le QR code en caisse pour cumuler vos points et utiliser vos bons d'achat.</p>
-    <p><strong>Installer sur votre téléphone :</strong> sur Android (Chrome) ou iPhone (Safari), tapez le menu <em>Partager</em> ou <em>Plus</em> puis <em>Ajouter à l'écran d'accueil</em>.</p>
-    <p><strong>Notifications :</strong> activez-les pour recevoir vos bons d'achat sans frais.</p>
-    <p><strong>Un problème ?</strong> Contactez votre boutique d'origine.</p>
-    <button id="help-close" class="modal-close">Fermer</button>
+      <section class="help-section">
+        <h4>📱 Utilisation en caisse</h4>
+        <ul class="help-list">
+          <li>Présentez votre <strong>code-barres</strong>, le vendeur le scanne avec la douchette.</li>
+          <li>Cliquez sur un <strong>bon d'achat</strong> pour afficher son code-barres en caisse.</li>
+          <li>Votre prochain bon se déclenche automatiquement au seuil indiqué.</li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h4>🍎 Installation sur iPhone (Safari)</h4>
+        <ol class="help-list">
+          <li>Ouvrez ce lien dans <strong>Safari</strong> (pas Chrome ni Gmail).</li>
+          <li>Touchez le bouton <strong>Partager</strong> en bas de l'écran (carré avec une flèche).</li>
+          <li>Faites défiler et touchez <strong>« Sur l'écran d'accueil »</strong>.</li>
+          <li>Touchez <strong>Ajouter</strong> en haut à droite.</li>
+          <li>Votre carte apparaît comme une vraie application sur l'écran d'accueil.</li>
+        </ol>
+      </section>
+
+      <section class="help-section">
+        <h4>🤖 Installation sur Android</h4>
+        <ol class="help-list">
+          <li>Ouvrez ce lien de préférence dans <strong>Google Chrome</strong>.</li>
+          <li>Touchez les <strong>3 points</strong> en haut à droite.</li>
+          <li>Choisissez <strong>« Installer l'application »</strong> ou <strong>« Ajouter à l'écran d'accueil »</strong>.</li>
+          <li>Sur certains téléphones Android, notamment <strong>Samsung</strong>, <em>Google Play Protect</em> peut afficher le message <strong>« Appli non sécurisée bloquée »</strong>. <strong>Il ne faut pas appuyer directement sur OK.</strong> Appuyez d'abord sur <strong>« En savoir plus »</strong>, puis sur <strong>« Installer quand même »</strong>. L'application s'installe ensuite normalement.</li>
+        </ol>
+      </section>
+
+      <section class="help-section help-section-fallback">
+        <h4>💡 Si l'installation ne fonctionne pas</h4>
+        <p>Pas d'inquiétude&nbsp;: <strong>vous n'êtes pas obligé d'installer l'application</strong>. Vous pouvez tout à fait&nbsp;:</p>
+        <ul class="help-list">
+          <li>Garder le SMS reçu et cliquer sur le lien à chaque visite.</li>
+          <li>Ajouter ce lien à vos favoris dans votre navigateur.</li>
+          <li>Demander au vendeur de <strong>scanner directement le code-barres depuis votre SMS</strong> ou ce site web&nbsp;: la carte s'affiche pareil.</li>
+        </ul>
+      </section>
+    </div>
   </div>
-</div>
 
-<script src="/assets/js/qrcode.min.js"></script>
-<script src="/assets/js/api.js"></script>
-<script src="/assets/js/theme.js"></script>
-<script src="/assets/js/ma-carte.js"></script>
+  <!-- MODAL ACCUEIL PREMIÈRE VISITE -->
+  <div id="welcome-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
+    <div class="modal modal-welcome">
+      <button id="welcome-close" class="modal-close" aria-label="Fermer" type="button">&times;</button>
+      <h3 id="welcome-title">Voici votre carte fidélité</h3>
+      <p class="welcome-text">Pour rester informé de vos bons d'achat, promotions et informations de votre boutique, vous pouvez ajouter cette carte sur l'écran d'accueil de votre téléphone.</p>
+      <div class="welcome-actions">
+        <button id="welcome-install" class="btn-primary" type="button">Comment l'installer</button>
+        <button id="welcome-later" class="btn-secondary" type="button">Plus tard</button>
+      </div>
+    </div>
+  </div>
 
+  <!-- MODAL BON D'ACHAT — barcode CODE128 pour scan caisse -->
+  <div id="bon-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="bon-modal-title">
+    <div class="modal modal-bon">
+      <button id="bon-modal-close" class="modal-close" aria-label="Fermer" type="button">&times;</button>
+      <p class="bon-modal-label">Bon d'achat</p>
+      <p id="bon-modal-amount" class="bon-modal-amount">0,00 €</p>
+      <div class="bon-modal-barcode-wrap">
+        <svg id="bon-modal-barcode"></svg>
+      </div>
+      <p id="bon-modal-code" class="bon-modal-code"></p>
+      <div class="bon-modal-meta">
+        <div><span>Émis le</span><strong id="bon-modal-date"></strong></div>
+        <div><span>Boutique</span><strong id="bon-modal-shop"></strong></div>
+      </div>
+      <p class="bon-modal-hint">Présentez ce code-barres en caisse</p>
+    </div>
+  </div>
+
+  <!-- LIBS -->
+  <script src="/assets/js/qrcode.min.js"></script>
+  <script src="/assets/js/jsbarcode.min.js"></script>
+
+  <!-- APP -->
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/theme.js"></script>
+  <script src="/assets/js/ma-carte.js"></script>
 </body>
 </html>
