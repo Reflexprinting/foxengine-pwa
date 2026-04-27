@@ -22,6 +22,27 @@ function detectMimeFromUrl(url) {
   return 'image/png';
 }
 
+// Transforme une URL Wix CMS rectangulaire en URL carrée de la taille demandée.
+// Indispensable côté Android Chrome qui refuse les icônes d'app non-carrées
+// et tombe en fallback sur l'icône FoxEngine générique.
+//
+// Pattern Wix CMS : .../v1/fill/w_NNN,h_NNN,al_c,q_85,...
+// On remplace w_X,h_Y par w_<size>,h_<size> en gardant les autres paramètres.
+// Si l'URL n'est pas une URL Wix CMS reconnaissable, on retourne l'original.
+function makeWixSquareUrl(originalUrl, size) {
+  if (!originalUrl) return originalUrl;
+  try {
+    if (!/static\.wixstatic\.com/.test(originalUrl)) return originalUrl;
+    if (!/\/fill\/w_\d+,h_\d+/.test(originalUrl))    return originalUrl;
+    return originalUrl.replace(
+      /\/fill\/w_\d+,h_\d+/,
+      '/fill/w_' + size + ',h_' + size
+    );
+  } catch (_) {
+    return originalUrl;
+  }
+}
+
 function manifestHeaders() {
   return {
     'Content-Type': 'application/manifest+json; charset=utf-8',
@@ -82,13 +103,19 @@ function buildBoutiqueManifest(code, boutique) {
     m.background_color = boutique.couleurPrimaire;
   }
 
-  // Logo boutique → icônes (priorité), fallback FoxEngine conservé après
+  // Logo boutique → icônes carrées Wix (192/512) + fallback FoxEngine après
+  // Android Chrome exige des icônes carrées 192x192 ou 512x512 pour l'app
+  // installée. On génère 2 URLs carrées via le redimensionnement Wix CMS.
   const logoUrl = (typeof boutique.logoUrl === 'string') ? boutique.logoUrl.trim() : '';
   if (logoUrl) {
     const mime = detectMimeFromUrl(logoUrl);
+    const url192 = makeWixSquareUrl(logoUrl, 192);
+    const url512 = makeWixSquareUrl(logoUrl, 512);
+
     const boutiqueIcons = [
-      { src: logoUrl, sizes: 'any', type: mime, purpose: 'any' },
-      { src: logoUrl, sizes: 'any', type: mime, purpose: 'maskable' }
+      { src: url192, sizes: '192x192', type: mime, purpose: 'any' },
+      { src: url512, sizes: '512x512', type: mime, purpose: 'any' },
+      { src: url512, sizes: '512x512', type: mime, purpose: 'maskable' }
     ];
     m.icons = boutiqueIcons.concat(m.icons);
   }
