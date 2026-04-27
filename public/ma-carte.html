@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B3D91">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Ma Carte">
+<title>Ma Carte de fidélité</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/icon-192.png">
+<link rel="stylesheet" href="/assets/css/ma-carte.css">
+</head>
+<body>
+
+<div class="app">
+
+  <div id="state-loading" class="state active">
+    <div class="spinner"></div>
+    <h2>Chargement de votre carte…</h2>
+    <p>Quelques secondes seulement.</p>
+  </div>
+
+  <div id="state-error" class="state">
+    <h2>Carte indisponible</h2>
+    <p id="error-msg">Une erreur est survenue.</p>
+  </div>
+
+  <div id="state-ready" class="state">
+
+    <div class="shop-header">
+      <img id="shop-logo" class="shop-logo" alt="" src="/assets/img/fox-engine-logo.png">
+      <div class="shop-info">
+        <div id="shop-name" class="shop-name">—</div>
+        <div id="shop-city" class="shop-city">—</div>
+      </div>
+      <button id="help-btn" class="help-btn" aria-label="Aide">?</button>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-label">Carte de fidélité</div>
+          <div id="card-name" class="card-name">—</div>
+          <div id="card-code" class="card-code">—</div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:center;">
+        <div id="qr-canvas" class="qr-wrap"></div>
+      </div>
+    </div>
+
+    <div class="fidelity">
+      <div class="fidelity-row">
+        <div class="fidelity-title">Progression vers votre prochain bon</div>
+      </div>
+      <div class="fidelity-row" style="align-items:baseline;">
+        <div class="fidelity-amount"><span id="fid-amount">0,00 €</span></div>
+        <small id="fid-seuil" style="color:var(--muted);">/ 0,00 €</small>
+      </div>
+      <div class="progress"><div id="fid-bar" class="progress-bar" style="width:0%;"></div></div>
+      <div id="fid-msg" class="fidelity-msg">—</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Mes bons d'achat</div>
+      <div id="bons-list"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Mes derniers passages</div>
+      <div id="passages-list"></div>
+    </div>
+
+    <div id="infos-section" class="section" style="display:none;">
+      <div class="section-title">Informations boutique</div>
+      <div id="infos-block"></div>
+    </div>
+
+    <div class="footer">
+      Mise à jour : <span id="updated-at" class="updated">—</span><br>
+      <small>Carte fidélité propulsée par FoxEngine</small>
+    </div>
+
+  </div>
+
+</div>
+
+<div id="help-modal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h3>Aide — Ma carte de fidélité</h3>
+    <p><strong>Comment l'utiliser ?</strong> Présentez le QR code en caisse pour cumuler vos points et utiliser vos bons d'achat.</p>
+    <p><strong>Installer sur votre téléphone :</strong> sur Android (Chrome) ou iPhone (Safari), tapez le menu <em>Partager</em> ou <em>Plus</em> puis <em>Ajouter à l'écran d'accueil</em>.</p>
+    <p><strong>Notifications :</strong> activez-les pour recevoir vos bons d'achat sans frais.</p>
+    <p><strong>Un problème ?</strong> Contactez votre boutique d'origine.</p>
+    <button id="help-close" class="modal-close">Fermer</button>
+  </div>
+</div>
+
+<script src="/assets/js/qrcode.min.js"></script>
+<script src="/assets/js/api.js"></script>
+<script src="/assets/js/theme.js"></script>
+<script src="/assets/js/ma-carte.js"></script>
+
+</body>
+</html>
