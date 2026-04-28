@@ -10,6 +10,14 @@
   <meta name="apple-mobile-web-app-title" content="Ma Carte">
   <title>Ma Carte de fidélité</title>
 
+  <!-- ════════════════════════════════════════════════════════════
+       POLISH-18 — OneSignal AppId fallback (sécurité si API ne le
+       renvoie pas). L'AppId réel est récupéré dynamiquement depuis
+       getPublicClientData via FoxPush.init(data). Ce meta sert
+       uniquement de fallback de dernier recours.
+       ════════════════════════════════════════════════════════════ -->
+  <meta name="onesignal-app-id-fallback" content="bb41b38a-a7de-444c-8e62-850989f45e7a">
+
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/icon-192.png">
@@ -50,6 +58,32 @@
         </div>
         <button id="help-btn" class="help-btn" aria-label="Aide" type="button">Aide</button>
       </header>
+
+      <!-- ════════════════════════════════════════════════════════════
+           POLISH-18 v2 — Bandeau CTA "Recevez vos bons automatiquement"
+           Caché par défaut, affiché par FoxPush.tryShowBanner() après
+           engagement client (premier des deux) :
+             - fermeture d'un bon d'achat (modale bon-modal fermée)
+             - OU 10 secondes après chargement de la carte
+           Conditions strictes :
+             - PWA installée (display-mode standalone)
+             - permissionStatus === 'default'
+             - Pas snoozé (< 3j depuis dernier dismiss)
+             - dismissedCount < 3
+           Le titre, le texte et le nom boutique sont injectés
+           dynamiquement par FoxPush (pas de texte en dur ici).
+           ════════════════════════════════════════════════════════════ -->
+      <div id="push-banner" class="fe-push-banner" hidden>
+        <div class="fe-push-banner-icon" aria-hidden="true">🔔</div>
+        <div class="fe-push-banner-text">
+          <strong id="push-banner-title">Recevez vos bons automatiquement</strong>
+          <span id="push-banner-message">Soyez averti dès qu'un bon d'achat ou une promotion arrive.</span>
+        </div>
+        <div class="fe-push-banner-actions">
+          <button id="push-banner-activate" class="btn-primary fe-push-banner-btn-primary" type="button">Activer</button>
+          <button id="push-banner-dismiss" class="btn-secondary fe-push-banner-btn-secondary" type="button">Plus tard</button>
+        </div>
+      </div>
 
       <!-- CARTE DE FIDÉLITÉ -->
       <div class="card">
@@ -120,15 +154,35 @@
       <button id="help-close" class="modal-close" aria-label="Fermer" type="button">&times;</button>
       <h3 id="help-title">Comment utiliser ma carte&nbsp;?</h3>
 
-      <!-- ════════════════════════════════════════════════════════════════
-           POLISH-17 — Section "Installer ma carte" AJOUTÉE EN HAUT
-           Les sections iPhone / Android / fallback existantes restent
-           strictement intactes en dessous (Option 3 validée).
-           ════════════════════════════════════════════════════════════════ -->
+      <!-- ════════════════════════════════════════════════════════════
+           POLISH-17 — Section "Installer ma carte" en haut de Aide
+           ════════════════════════════════════════════════════════════ -->
       <section class="help-section help-section-install-cta">
         <h4>📲 Installer ma carte</h4>
         <p>Ajoutez votre carte sur l'écran d'accueil pour la retrouver en un clic et recevoir vos bons plus facilement.</p>
         <button id="help-install-btn" class="btn-primary help-install-btn" type="button">Voir les étapes d'installation</button>
+      </section>
+
+      <!-- ════════════════════════════════════════════════════════════
+           POLISH-18 v2 — Section "Notifications" dans Aide
+           Affiche dynamiquement l'état actuel :
+           - "Activées" si granted + subscription
+           - "Désactivées" si denied
+           - "Non activées" si default
+           Bouton "Activer" affiché uniquement si default + PWA installée
+           ════════════════════════════════════════════════════════════ -->
+      <section class="help-section help-section-push-cta" id="help-push-section">
+        <h4>🔔 Recevez vos bons automatiquement</h4>
+        <p id="help-push-message">Soyez averti dès qu'un bon d'achat ou une promotion arrive.</p>
+
+        <div class="fe-push-status" id="help-push-status" hidden>
+          <span class="fe-push-status-label">État actuel&nbsp;:</span>
+          <span class="fe-push-status-value" id="help-push-status-value">—</span>
+        </div>
+
+        <p class="fe-push-hint" id="help-push-hint" hidden></p>
+
+        <button id="help-push-activate-btn" class="btn-primary fe-push-help-btn" type="button" hidden>Activer</button>
       </section>
 
       <section class="help-section">
@@ -205,9 +259,7 @@
   </div>
 
   <!-- ════════════════════════════════════════════════════════════════
-       POLISH-17 — MODALES INSTALL UX
-       Toutes encapsulées dans #install-flow-root pour isolation.
-       Aucune classe partagée avec les modales existantes (préfixe .fe-).
+       POLISH-17 — MODALES INSTALL UX (préfixe .fe-)
        ════════════════════════════════════════════════════════════════ -->
 
   <!-- MODAL INSTALL PRINCIPALE -->
@@ -415,6 +467,12 @@
   <!-- LIBS -->
   <script src="/assets/js/qrcode.min.js"></script>
   <script src="/assets/js/jsbarcode.min.js"></script>
+
+  <!-- ════════════════════════════════════════════════════════════
+       POLISH-18 — OneSignal Web SDK v16
+       Chargé async pour ne pas bloquer le rendu de la carte.
+       ════════════════════════════════════════════════════════════ -->
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 
   <!-- APP -->
   <script src="/assets/js/api.js"></script>

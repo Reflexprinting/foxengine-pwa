@@ -788,3 +788,181 @@ html, body {
   .fe-tuto-icon svg { width: 18px; height: 18px; }
   .fe-tuto-content p { font-size: 13px; }
 }
+
+/* ════════════════════════════════════════════════════════════════
+   POLISH-18 — STYLES PUSH ONESIGNAL
+   ════════════════════════════════════════════════════════════════
+   Préfixes .fe-push-* pour isolation totale.
+   Aucune modification des classes existantes.
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── Bandeau CTA "Activer les notifications" ───────── */
+.fe-push-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: linear-gradient(135deg, rgba(11,61,145,.08), rgba(242,106,33,.08));
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow);
+}
+.fe-push-banner[hidden] { display: none !important; }
+
+.fe-push-banner-icon {
+  font-size: 28px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.fe-push-banner-text {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.fe-push-banner-text strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.fe-push-banner-text span {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.fe-push-banner-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+.fe-push-banner-btn-primary {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: var(--primary);
+  color: #fff;
+  transition: opacity 0.15s ease;
+  font-family: inherit;
+}
+.fe-push-banner-btn-primary:hover { opacity: 0.92; }
+.fe-push-banner-btn-primary:active { transform: scale(0.98); }
+.fe-push-banner-btn-secondary {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  transition: background 0.15s ease;
+  font-family: inherit;
+}
+.fe-push-banner-btn-secondary:hover { background: var(--surface); }
+.fe-push-banner-btn-secondary:active { transform: scale(0.98); }
+
+/* ── Section "Activer les notifications" dans Aide ── */
+.help-section-push-cta {
+  background: linear-gradient(135deg, rgba(11,61,145,.04), rgba(242,106,33,.04));
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 14px 16px;
+  margin-bottom: 8px;
+}
+.help-section-push-cta[hidden] { display: none !important; }
+.help-section-push-cta h4 {
+  font-size: 15px;
+  color: var(--primary);
+  margin: 0 0 6px;
+}
+.help-section-push-cta p {
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0 0 10px;
+  color: var(--text);
+}
+
+/* État dans Aide : Activées / Désactivées / Non activées */
+.fe-push-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  margin: 8px 0;
+  font-size: 13px;
+}
+.fe-push-status[hidden] { display: none !important; }
+.fe-push-status-label {
+  color: var(--muted);
+  font-weight: 500;
+}
+.fe-push-status-value {
+  font-weight: 700;
+  color: var(--text);
+}
+.fe-push-status-value.is-granted { color: var(--green); }
+.fe-push-status-value.is-denied  { color: var(--red); }
+.fe-push-status-value.is-default { color: var(--muted); }
+
+/* Hint contextuel sous la section (ex: "Allez dans paramètres navigateur") */
+.fe-push-hint {
+  font-size: 12px !important;
+  color: var(--muted) !important;
+  font-style: italic;
+  margin: 6px 0 8px !important;
+  padding: 8px 10px;
+  background: #FFF8E1;
+  border-left: 3px solid var(--orange);
+  border-radius: 4px;
+}
+.fe-push-hint[hidden] { display: none !important; }
+
+.fe-push-help-btn {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: var(--r-sm);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: var(--primary);
+  color: #fff;
+  transition: opacity 0.15s ease;
+  font-family: inherit;
+}
+.fe-push-help-btn[hidden] { display: none !important; }
+.fe-push-help-btn:hover { opacity: 0.92; }
+.fe-push-help-btn:active { transform: scale(0.98); }
+
+/* ── Responsive polish-18 ───────────────────────────── */
+@media (min-width: 480px) {
+  .fe-push-banner-actions {
+    flex-direction: row;
+    width: auto;
+    flex-shrink: 0;
+  }
+  .fe-push-banner-btn-primary,
+  .fe-push-banner-btn-secondary {
+    width: auto;
+    min-width: 130px;
+  }
+}
+@media (max-width: 380px) {
+  .fe-push-banner { padding: 12px; }
+  .fe-push-banner-icon { font-size: 24px; }
+  .fe-push-banner-text strong { font-size: 13px; }
+  .fe-push-banner-text span { font-size: 11px; }
+}

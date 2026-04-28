@@ -553,6 +553,17 @@
           console.warn('[ma-carte] FoxInstall.init failed', e);
         }
       }
+
+      // ════════════════════════════════════════════════════════════
+      // POLISH-18 — Hook OneSignal push flow
+      // ════════════════════════════════════════════════════════════
+      if (window.FoxPush && typeof window.FoxPush.init === 'function') {
+        try {
+          window.FoxPush.init(data);
+        } catch (e) {
+          console.warn('[ma-carte] FoxPush.init failed', e);
+        }
+      }
     } catch (e) {
       console.error('[ma-carte] erreur', e);
       showState('state-error');
@@ -957,6 +968,693 @@
       // Affichage auto modale install si éligible
       tryShowAutoAfterWelcome();
     }
+  };
+
+})();
+
+
+
+// ════════════════════════════════════════════════════════════════════
+// POLISH-18 v2 — Module FoxPush (OneSignal Web SDK v16)
+// ════════════════════════════════════════════════════════════════════
+// VERSION OPTIMISÉE BUSINESS — MAXIMISER LE TAUX D'ACTIVATION
+//
+// Stratégie :
+//   1. Bandeau UNIQUEMENT si PWA installée (display-mode standalone)
+//      → iPhone navigateur : NON
+//      → Android navigateur : NON
+//      → Desktop navigateur : NON
+//      → PWA installée toutes plateformes : OUI
+//
+//   2. Bandeau affiché APRÈS engagement client (premier des deux) :
+//      - Fermeture d'un bon d'achat (modale bon-modal fermée)
+//      - OU 10 secondes après chargement de la carte
+//
+//   3. Texte personnalisé avec nom boutique dynamique :
+//      "{nomBoutique} vous envoie vos bons et promotions..."
+//
+//   4. Snooze 3 jours après "Plus tard"
+//      Max 3 dismiss → bandeau ne s'affiche plus auto
+//      Bouton manuel dans Aide reste accessible
+//
+//   5. Init OneSignal SDK + tags + login(codeClient) :
+//      identique à v1 (validé)
+//
+// Ce module ne touche PAS au code principal de ma-carte.js.
+// Il se branche via window.FoxPush.init(data) appelé dans init().
+// ════════════════════════════════════════════════════════════════════
+(function () {
+  'use strict';
+
+  // ── Configuration ───────────────────────────────────────────────
+  var APP_VERSION       = 'phase3-polish-18-v2.1';
+  var REGISTER_ENDPOINT = 'https://www.my-foxengine.com/_functions/registerPushDevice';
+  var SNOOZE_DAYS       = 3;          // ⚠️ v2 : 3 jours (vs 7j v1)
+  var MAX_DISMISS_AUTO  = 3;
+  var SDK_TIMEOUT_MS    = 8000;
+  var ENGAGEMENT_DELAY_MS = 10000;    // ⚠️ v2 : 10s timer engagement
+
+  // ── Clés localStorage (préfixe fe_push_cta_*) ────────────────────
+  var LS_DISMISSED_COUNT   = 'fe_push_cta_dismissed_count';
+  var LS_LAST_DISMISSED_AT = 'fe_push_cta_last_dismissed_at';
+  var LS_SHOWN_COUNT       = 'fe_push_cta_shown_count';
+
+  // ── État interne ────────────────────────────────────────────────
+  var _carteData         = null;
+  var _appId             = null;
+  var _displayMode       = 'browser';
+  var _platform          = 'desktop';
+  var _isOSReady         = false;
+  var _isOSAttempted     = false;
+  var _engagementTimer   = null;
+  var _engagementFired   = false;
+  var _bonModalObserver  = null;
+  var _bonWasOpen        = false;
+  var _boutiqueName      = '';
+
+  // ── Détection (mêmes règles que polish-17 FoxInstall) ───────────
+  function detectDisplayMode() {
+    try {
+      if (window.navigator.standalone === true) return 'standalone';
+      if (window.matchMedia &&
+          window.matchMedia('(display-mode: standalone)').matches) {
+        return 'standalone';
+      }
+      if (window.matchMedia &&
+          window.matchMedia('(display-mode: minimal-ui)').matches) {
+        return 'minimal-ui';
+      }
+    } catch (_) { /* ignore */ }
+    return 'browser';
+  }
+
+  function detectPlatform() {
+    var ua = (navigator.userAgent || '').toString();
+    var isIPad = /iPad|Macintosh/.test(ua) && 'ontouchend' in document;
+    if (/iPhone|iPod/.test(ua) || isIPad) return 'ios';
+    if (/Android/i.test(ua)) return 'android';
+    return 'desktop';
+  }
+
+  // ── localStorage (safe) ─────────────────────────────────────────
+  function lsGetNumber(key) {
+    try {
+      var v = parseInt(localStorage.getItem(key) || '0', 10);
+      return isNaN(v) ? 0 : v;
+    } catch (_) { return 0; }
+  }
+  function lsGetString(key) {
+    try { return localStorage.getItem(key) || ''; }
+    catch (_) { return ''; }
+  }
+  function lsSet(key, value) {
+    try { localStorage.setItem(key, String(value)); }
+    catch (_) { /* ignore */ }
+  }
+
+  // ── Snooze 3 jours v2 ───────────────────────────────────────────
+  function isSnoozedNow() {
+    var lastIso = lsGetString(LS_LAST_DISMISSED_AT);
+    if (!lastIso) return false;
+    try {
+      var last = new Date(lastIso);
+      if (isNaN(last.getTime())) return false;
+      var diffMs   = Date.now() - last.getTime();
+      var diffDays = diffMs / (24 * 60 * 60 * 1000);
+      return diffDays < SNOOZE_DAYS;
+    } catch (_) { return false; }
+  }
+
+  function reachedMaxDismiss() {
+    return lsGetNumber(LS_DISMISSED_COUNT) >= MAX_DISMISS_AUTO;
+  }
+
+  function recordDismissedLocal() {
+    var c = lsGetNumber(LS_DISMISSED_COUNT) + 1;
+    lsSet(LS_DISMISSED_COUNT, c);
+    lsSet(LS_LAST_DISMISSED_AT, new Date().toISOString());
+  }
+
+  function recordShownLocal() {
+    var c = lsGetNumber(LS_SHOWN_COUNT) + 1;
+    lsSet(LS_SHOWN_COUNT, c);
+  }
+
+  // ── DOM helpers ─────────────────────────────────────────────────
+  function $(id) { return document.getElementById(id); }
+
+  function showBanner() {
+    var el = $('push-banner');
+    if (el) el.hidden = false;
+  }
+  function hideBanner() {
+    var el = $('push-banner');
+    if (el) el.hidden = true;
+  }
+
+  // ── Texte dynamique avec nom boutique ───────────────────────────
+  function resolveBoutiqueName(data) {
+    if (!data || !data.boutique) return '';
+    var b = data.boutique;
+    var name = b.enseigne || b.nom || b.title || '';
+    return String(name).trim();
+  }
+
+  function buildBannerMessage() {
+    var msg;
+    if (_boutiqueName) {
+      msg = _boutiqueName + ' vous envoie vos bons et promotions directement sur votre téléphone.';
+    } else {
+      // Fallback si nom boutique absent (ne devrait pas arriver)
+      msg = 'Soyez averti dès qu\'un bon d\'achat ou une promotion arrive.';
+    }
+    return msg;
+  }
+
+  function applyDynamicTexts() {
+    // Bandeau
+    var bannerMsg = $('push-banner-message');
+    if (bannerMsg) bannerMsg.textContent = buildBannerMessage();
+
+    // Section Aide
+    var helpMsg = $('help-push-message');
+    if (helpMsg) helpMsg.textContent = buildBannerMessage();
+  }
+
+  // ── Récupération AppId (cascade — identique v1) ─────────────────
+  function resolveAppId(data) {
+    var fromBoutique = (data && data.boutique && data.boutique.oneSignalAppId)
+                       ? String(data.boutique.oneSignalAppId).trim()
+                       : '';
+    if (fromBoutique) return fromBoutique;
+
+    var fromData = (data && data.oneSignalAppId)
+                   ? String(data.oneSignalAppId).trim()
+                   : '';
+    if (fromData) return fromData;
+
+    try {
+      var meta = document.querySelector('meta[name="onesignal-app-id-fallback"]');
+      if (meta) {
+        var v = String(meta.getAttribute('content') || '').trim();
+        if (v) return v;
+      }
+    } catch (_) { /* ignore */ }
+
+    return null;
+  }
+
+  // ── Backend tracking (silencieux) ───────────────────────────────
+  function postRegister(extras) {
+    if (!_carteData || !_carteData.code_client || !_carteData.boutique_id) {
+      console.warn('[FoxPush v2] tracking skipped: missing code_client or boutique_id');
+      return;
+    }
+
+    var payload = {
+      codeClient:        String(_carteData.code_client),
+      boutiqueId:        String(_carteData.boutique_id),
+      platform:          _platform,
+      appVersion:        APP_VERSION,
+      userAgent:         (navigator.userAgent || '').substring(0, 250),
+      pwaInstalled:      (_displayMode === 'standalone'),
+      displayMode:       _displayMode,
+
+      permissionStatus:  (extras && extras.permissionStatus) || 'default',
+      pushEnabled:       !!(extras && extras.pushEnabled),
+      subscriptionId:    (extras && extras.subscriptionId)   || null,
+      oneSignalUserId:   (extras && extras.oneSignalUserId)  || null,
+
+      installPromptShown:     !!(extras && extras.installPromptShown),
+      installPromptDismissed: !!(extras && extras.installPromptDismissed)
+    };
+
+    try {
+      fetch(REGISTER_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        credentials: 'omit',
+        cache: 'no-store',
+        mode: 'cors',
+        keepalive: true
+      }).then(function (res) {
+        if (!res.ok) {
+          console.warn('[FoxPush v2] register HTTP ' + res.status);
+        }
+      }).catch(function (err) {
+        console.warn('[FoxPush v2] register fetch failed', err);
+      });
+    } catch (e) {
+      console.warn('[FoxPush v2] register exception', e);
+    }
+  }
+
+  // ── Init OneSignal SDK ──────────────────────────────────────────
+  function initOneSignal() {
+    if (_isOSAttempted) return;
+    _isOSAttempted = true;
+
+    if (!_appId) {
+      console.warn('[FoxPush v2] no AppId available, OneSignal not initialized');
+      return;
+    }
+
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(function (OneSignal) {
+      OneSignal.init({
+        appId: _appId,
+        allowLocalhostAsSecureOrigin: false,
+        autoResubscribe: true,
+        // ⚠️ POLISH-18-v2.1 — correctif Service Worker combiné
+        // OneSignal doit utiliser notre sw.js combiné (qui inclut
+        // déjà importScripts OneSignal en haut), et non chercher
+        // un OneSignalSDKWorker.js séparé à la racine.
+        serviceWorkerPath: 'sw.js',
+        serviceWorkerParam: { scope: '/' },
+        notifyButton: { enable: false },
+        promptOptions: {
+          slidedown: {
+            prompts: []
+          }
+        }
+      }).then(function () {
+        _isOSReady = true;
+
+        // Login(codeClient) — aligne oneSignalUserId
+        if (_carteData && _carteData.code_client) {
+          try {
+            OneSignal.login(String(_carteData.code_client));
+          } catch (e) {
+            console.warn('[FoxPush v2] OneSignal.login failed', e);
+          }
+        }
+
+        // Tags multi-tenant
+        applyTags(OneSignal);
+
+        // Listeners
+        try {
+          OneSignal.User.PushSubscription.addEventListener(
+            'change',
+            handleSubscriptionChange
+          );
+          OneSignal.Notifications.addEventListener(
+            'permissionChange',
+            handlePermissionChange
+          );
+        } catch (e) {
+          console.warn('[FoxPush v2] OneSignal addEventListener failed', e);
+        }
+
+        // POST état actuel (réelles valeurs OneSignal)
+        readAndPostState(OneSignal);
+
+        // Mise à jour section Aide
+        updateAideStatus(OneSignal);
+
+        // ⚠️ v2 : on N'AFFICHE PAS le bandeau immédiatement.
+        // L'affichage est conditionné à l'engagement client.
+        // → setupEngagementTracking() s'occupe de tryShowBanner()
+
+      }).catch(function (err) {
+        console.warn('[FoxPush v2] OneSignal.init failed', err);
+      });
+    });
+
+    setTimeout(function () {
+      if (!_isOSReady) {
+        console.warn('[FoxPush v2] OneSignal SDK not ready after ' + SDK_TIMEOUT_MS + 'ms');
+      }
+    }, SDK_TIMEOUT_MS);
+  }
+
+  // ── Tags multi-tenant ──────────────────────────────────────────
+  function applyTags(OneSignal) {
+    if (!_carteData) return;
+    try {
+      OneSignal.User.addTags({
+        boutiqueId: String(_carteData.boutique_id || ''),
+        codeClient: String(_carteData.code_client || ''),
+        platform:   _platform,
+        appVersion: APP_VERSION
+      });
+    } catch (e) {
+      console.warn('[FoxPush v2] addTags failed', e);
+    }
+  }
+
+  // ── Lecture état OneSignal et POST backend ──────────────────────
+  function readAndPostState(OneSignal) {
+    try {
+      var permissionStatus = 'default';
+      var pushEnabled = false;
+      var subscriptionId = null;
+      var oneSignalUserId = null;
+
+      try {
+        var perm = OneSignal.Notifications.permission;
+        if (typeof perm === 'string') {
+          permissionStatus = perm;
+        } else if (perm === true) {
+          permissionStatus = 'granted';
+        } else {
+          if (typeof Notification !== 'undefined' && Notification.permission) {
+            permissionStatus = Notification.permission;
+          }
+        }
+      } catch (_) { /* ignore */ }
+
+      try {
+        var sub = OneSignal.User.PushSubscription;
+        if (sub) {
+          subscriptionId = sub.id || sub.token || null;
+          pushEnabled    = (sub.optedIn === true) && (permissionStatus === 'granted');
+        }
+      } catch (_) { /* ignore */ }
+
+      try {
+        oneSignalUserId = OneSignal.User.onesignalId || null;
+      } catch (_) { /* ignore */ }
+
+      postRegister({
+        permissionStatus: permissionStatus,
+        pushEnabled:      pushEnabled,
+        subscriptionId:   subscriptionId,
+        oneSignalUserId:  oneSignalUserId
+      });
+    } catch (e) {
+      console.warn('[FoxPush v2] readAndPostState failed', e);
+    }
+  }
+
+  // ── Listeners ──────────────────────────────────────────────────
+  function handleSubscriptionChange(event) {
+    if (!window.OneSignal) return;
+    readAndPostState(window.OneSignal);
+    // En cas de changement (granted ou denied) : cacher bandeau
+    hideBanner();
+    updateAideStatus(window.OneSignal);
+  }
+
+  function handlePermissionChange(event) {
+    if (!window.OneSignal) return;
+    readAndPostState(window.OneSignal);
+    hideBanner();
+    updateAideStatus(window.OneSignal);
+  }
+
+  // ── ⚠️ v2 — Conditions strictes affichage bandeau ───────────────
+  function shouldShowBanner(OneSignal) {
+    // 1. PWA OBLIGATOIREMENT installée (toutes plateformes)
+    if (_displayMode !== 'standalone') {
+      return false;
+    }
+
+    // 2. AppId obligatoire
+    if (!_appId) return false;
+
+    // 3. SDK doit être prêt
+    if (!_isOSReady || !OneSignal) return false;
+
+    // 4. Lire état permission
+    var permissionStatus = 'default';
+    try {
+      var perm = OneSignal.Notifications.permission;
+      if (typeof perm === 'string') permissionStatus = perm;
+      else if (perm === true) permissionStatus = 'granted';
+      else if (typeof Notification !== 'undefined') permissionStatus = Notification.permission;
+    } catch (_) { /* ignore */ }
+
+    // Pas de bandeau si déjà granted ou denied
+    if (permissionStatus !== 'default') return false;
+
+    // 5. Snooze actif (3 jours)
+    if (isSnoozedNow()) return false;
+
+    // 6. Trop de refus
+    if (reachedMaxDismiss()) return false;
+
+    return true;
+  }
+
+  // ── ⚠️ v2 — Tentative affichage bandeau (post-engagement) ───────
+  function tryShowBanner() {
+    if (!_isOSReady || !window.OneSignal) {
+      // SDK pas encore prêt : on retentera quand listeners seront en place
+      return;
+    }
+    if (shouldShowBanner(window.OneSignal)) {
+      applyDynamicTexts();
+      showBanner();
+      recordShownLocal();
+    }
+  }
+
+  // ── ⚠️ v2 — Engagement Tracker ──────────────────────────────────
+  // Premier des deux atteint déclenche tryShowBanner() :
+  //   A) Fermeture d'une modale bon-modal (open puis close)
+  //   B) 10 secondes écoulées depuis init
+  function setupEngagementTracking() {
+    if (_engagementFired) return;
+
+    // A) Timer 10s
+    _engagementTimer = setTimeout(function () {
+      if (_engagementFired) return;
+      _engagementFired = true;
+      console.log('[FoxPush v2] engagement timer 10s fired');
+      tryShowBanner();
+    }, ENGAGEMENT_DELAY_MS);
+
+    // B) Observer modale bon-modal : open → close
+    var bonModal = $('bon-modal');
+    if (!bonModal) {
+      // Pas de modale bon dans le DOM : seul le timer comptera
+      return;
+    }
+
+    try {
+      _bonModalObserver = new MutationObserver(function () {
+        var isOpen = bonModal.classList.contains('open');
+
+        if (isOpen) {
+          _bonWasOpen = true;
+          return;
+        }
+
+        // Modale fermée APRÈS avoir été ouverte = engagement
+        if (!isOpen && _bonWasOpen) {
+          _bonWasOpen = false;
+
+          if (_engagementFired) return;
+          _engagementFired = true;
+
+          // Annuler le timer (engagement déjà acquis)
+          if (_engagementTimer) {
+            clearTimeout(_engagementTimer);
+            _engagementTimer = null;
+          }
+
+          // Petit délai (300ms) pour laisser la modale finir son anim de fermeture
+          // avant d'afficher le bandeau (évite chevauchement visuel).
+          console.log('[FoxPush v2] engagement bon-modal closed fired');
+          setTimeout(function () { tryShowBanner(); }, 300);
+        }
+      });
+
+      _bonModalObserver.observe(bonModal, {
+        attributes: true,
+        attributeFilter: ['class']
+      });
+    } catch (e) {
+      console.warn('[FoxPush v2] MutationObserver setup failed', e);
+    }
+  }
+
+  // ── Mise à jour section Aide ────────────────────────────────────
+  function updateAideStatus(OneSignal) {
+    var section = $('help-push-section');
+    var statusBlock = $('help-push-status');
+    var statusValue = $('help-push-status-value');
+    var hint = $('help-push-hint');
+    var btn = $('help-push-activate-btn');
+
+    if (!section || !statusBlock || !statusValue || !hint || !btn) return;
+
+    // Si pas d'AppId : indisponible
+    if (!_appId) {
+      section.hidden = false;
+      statusBlock.hidden = false;
+      statusValue.textContent = 'Indisponible';
+      statusValue.className = 'fe-push-status-value is-default';
+      hint.hidden = false;
+      hint.textContent = 'Le service de notifications n\'est pas encore configuré pour cette boutique.';
+      btn.hidden = true;
+      return;
+    }
+
+    // SDK pas prêt : chargement
+    if (!_isOSReady || !OneSignal) {
+      section.hidden = false;
+      statusBlock.hidden = false;
+      statusValue.textContent = 'Chargement…';
+      statusValue.className = 'fe-push-status-value is-default';
+      hint.hidden = true;
+      btn.hidden = true;
+      return;
+    }
+
+    // ⚠️ v2 — PWA pas installée : recommander d'installer d'abord
+    if (_displayMode !== 'standalone') {
+      section.hidden = false;
+      statusBlock.hidden = false;
+      statusValue.textContent = 'Non activées';
+      statusValue.className = 'fe-push-status-value is-default';
+      hint.hidden = false;
+      hint.textContent = 'Pour recevoir vos bons en notifications, vous devez d\'abord installer la carte sur votre écran d\'accueil.';
+      btn.hidden = true;
+      return;
+    }
+
+    // PWA installée : cas standards
+    var permissionStatus = 'default';
+    try {
+      var perm = OneSignal.Notifications.permission;
+      if (typeof perm === 'string') permissionStatus = perm;
+      else if (perm === true) permissionStatus = 'granted';
+      else if (typeof Notification !== 'undefined') permissionStatus = Notification.permission;
+    } catch (_) { /* ignore */ }
+
+    section.hidden = false;
+    statusBlock.hidden = false;
+
+    if (permissionStatus === 'granted') {
+      statusValue.textContent = '✅ Activées';
+      statusValue.className = 'fe-push-status-value is-granted';
+      hint.hidden = true;
+      btn.hidden = true;
+    } else if (permissionStatus === 'denied') {
+      statusValue.textContent = '❌ Désactivées';
+      statusValue.className = 'fe-push-status-value is-denied';
+      hint.hidden = false;
+      hint.textContent = 'Pour les réactiver, allez dans les paramètres de votre navigateur ou téléphone (paramètres du site).';
+      btn.hidden = true;
+    } else {
+      // ⚠️ v2 — bouton manuel TOUJOURS accessible (même après 3 refus)
+      statusValue.textContent = 'Non activées';
+      statusValue.className = 'fe-push-status-value is-default';
+      hint.hidden = true;
+      btn.hidden = false;
+    }
+  }
+
+  // ── Demande permission (déclenchée par bouton client) ───────────
+  function requestPermission() {
+    if (!_isOSReady || !window.OneSignal) {
+      console.warn('[FoxPush v2] cannot request permission: SDK not ready');
+      return;
+    }
+
+    // ⚠️ v2 — règle stricte : PWA installée obligatoire (toutes plateformes)
+    if (_displayMode !== 'standalone') {
+      console.warn('[FoxPush v2] PWA not installed: permission not allowed');
+      return;
+    }
+
+    var OneSignal = window.OneSignal;
+
+    try {
+      OneSignal.Notifications.requestPermission().then(function (granted) {
+        readAndPostState(OneSignal);
+        hideBanner();
+        updateAideStatus(OneSignal);
+      }).catch(function (err) {
+        console.warn('[FoxPush v2] requestPermission failed', err);
+      });
+    } catch (e) {
+      console.warn('[FoxPush v2] requestPermission exception', e);
+    }
+  }
+
+  // ── Wiring boutons ──────────────────────────────────────────────
+  function wireButtons() {
+    // Bandeau : Activer
+    var bannerActivate = $('push-banner-activate');
+    if (bannerActivate) {
+      bannerActivate.addEventListener('click', function () {
+        requestPermission();
+      });
+    }
+
+    // Bandeau : Plus tard
+    var bannerDismiss = $('push-banner-dismiss');
+    if (bannerDismiss) {
+      bannerDismiss.addEventListener('click', function () {
+        hideBanner();
+        recordDismissedLocal();
+      });
+    }
+
+    // Section Aide : Activer (toujours dispo, même après 3 refus)
+    var helpActivate = $('help-push-activate-btn');
+    if (helpActivate) {
+      helpActivate.addEventListener('click', function () {
+        requestPermission();
+      });
+    }
+  }
+
+  // ── API publique ────────────────────────────────────────────────
+  window.FoxPush = {
+    init: function (data) {
+      _carteData     = data || null;
+      _displayMode   = detectDisplayMode();
+      _platform      = detectPlatform();
+      _appId         = resolveAppId(data);
+      _boutiqueName  = resolveBoutiqueName(data);
+
+      // Appliquer textes dynamiques (avec nom boutique) immédiatement
+      applyDynamicTexts();
+
+      // Wiring boutons (toujours, même si AppId absent)
+      wireButtons();
+
+      // Affichage initial section Aide (avant init SDK)
+      updateAideStatus(null);
+
+      // Si AppId absent : on s'arrête ici. Pas d'init OneSignal.
+      if (!_appId) {
+        console.warn('[FoxPush v2] AppId absent, OneSignal disabled');
+        return;
+      }
+
+      // Si PWA pas installée : on init OneSignal quand même pour mettre à
+      // jour le tracking backend, mais le bandeau ne s'affichera pas
+      // (cf. shouldShowBanner). La section Aide affichera la recommandation.
+      initOneSignal();
+
+      // ⚠️ v2 — Engagement tracking (premier des deux) :
+      //   - timer 10s
+      //   - fermeture bon-modal
+      // Ne démarre que si PWA installée ET conditions globales OK.
+      // Petite vérification préliminaire pour économiser les listeners.
+      var earlyCheck =
+        (_displayMode === 'standalone') &&
+        (!isSnoozedNow()) &&
+        (!reachedMaxDismiss());
+
+      if (earlyCheck) {
+        setupEngagementTracking();
+      } else {
+        console.log('[FoxPush v2] engagement tracking skipped',
+          'displayMode=' + _displayMode,
+          'snoozed=' + isSnoozedNow(),
+          'maxDismiss=' + reachedMaxDismiss());
+      }
+    },
+
+    // Méthode publique pour debug / tests
+    requestPermission: requestPermission
   };
 
 })();
