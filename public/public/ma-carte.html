@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0B3D91">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Ma Carte">
+  <title>Ma Carte de fidélité</title>
+
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/icon-192.png">
+
+  <link rel="stylesheet" href="/assets/css/ma-carte.css">
+</head>
+<body>
+
+  <div class="app">
+
+    <!-- ÉTAT 1 : LOADING -->
+    <section id="state-loading" class="state active">
+      <div class="loader">
+        <div class="spinner"></div>
+        <p>Chargement de votre carte…</p>
+      </div>
+    </section>
+
+    <!-- ÉTAT 2 : ERREUR -->
+    <section id="state-error" class="state">
+      <div class="error-box">
+        <div class="error-icon">!</div>
+        <h2>Carte indisponible</h2>
+        <p id="error-msg">Impossible de charger votre carte. Réessayez plus tard.</p>
+      </div>
+    </section>
+
+    <!-- ÉTAT 3 : CARTE PRÊTE -->
+    <section id="state-ready" class="state">
+
+      <!-- HEADER BOUTIQUE -->
+      <header class="shop-header">
+        <img id="shop-logo" alt="Logo boutique" class="shop-logo">
+        <div id="shop-logo-fallback" class="shop-logo-fallback" role="status" aria-live="polite" hidden>Logo boutique non configuré</div>
+        <div class="shop-info">
+          <h1 id="shop-name" class="shop-name"></h1>
+          <p id="shop-city" class="shop-city"></p>
+        </div>
+        <button id="help-btn" class="help-btn" aria-label="Aide" type="button">Aide</button>
+      </header>
+
+      <!-- CARTE DE FIDÉLITÉ -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-label">Carte de fidélité</span>
+        </div>
+        <div class="card-body">
+          <div class="card-name" id="card-name"></div>
+          <div class="card-code" id="card-code"></div>
+
+          <div class="barcode-wrapper">
+            <svg id="card-barcode" class="card-barcode" role="img" aria-label="Code-barres carte fidélité"></svg>
+          </div>
+
+          <p class="card-hint">Présentez ce code-barres en caisse</p>
+        </div>
+      </div>
+
+      <!-- OFFRES BOUTIQUE — REMONTÉES sous la carte, avant la fidélité -->
+      <section id="offres-section" class="offres-section" style="display:none;">
+        <h2 class="section-title">Offres et infos</h2>
+        <div id="offres-block" class="offres-block"></div>
+      </section>
+
+      <!-- PROGRESSION FIDÉLITÉ -->
+      <section class="fidelity-section">
+        <h2 class="section-title">Progression vers votre prochain bon</h2>
+        <div class="fidelity-amounts">
+          <span id="fid-amount" class="fid-amount"></span>
+          <span id="fid-seuil" class="fid-seuil"></span>
+        </div>
+        <div class="fid-bar-wrap">
+          <div id="fid-bar" class="fid-bar"></div>
+        </div>
+        <p id="fid-msg" class="fid-msg"></p>
+      </section>
+
+      <!-- BONS D'ACHAT — CLIQUABLES -->
+      <section class="section">
+        <h2 class="section-title">Mes bons d'achat</h2>
+        <div id="bons-list" class="bons-list"></div>
+      </section>
+
+      <!-- DERNIERS PASSAGES -->
+      <section class="section">
+        <h2 class="section-title">Mes derniers passages</h2>
+        <div id="passages-list" class="passages-list"></div>
+      </section>
+
+      <!-- HORAIRES BOUTIQUE -->
+      <section id="infos-section" class="section" style="display:none;">
+        <h2 class="section-title">Informations boutique</h2>
+        <div id="infos-block" class="infos-block"></div>
+      </section>
+
+      <!-- DATE MAJ -->
+      <footer class="updated">
+        Mis à jour le <span id="updated-at"></span>
+      </footer>
+
+    </section>
+
+  </div>
+
+  <!-- MODAL AIDE -->
+  <div id="help-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="help-title">
+    <div class="modal modal-help">
+      <button id="help-close" class="modal-close" aria-label="Fermer" type="button">&times;</button>
+      <h3 id="help-title">Comment utiliser ma carte&nbsp;?</h3>
+
+      <!-- ════════════════════════════════════════════════════════════════
+           POLISH-17 — Section "Installer ma carte" AJOUTÉE EN HAUT
+           Les sections iPhone / Android / fallback existantes restent
+           strictement intactes en dessous (Option 3 validée).
+           ════════════════════════════════════════════════════════════════ -->
+      <section class="help-section help-section-install-cta">
+        <h4>📲 Installer ma carte</h4>
+        <p>Ajoutez votre carte sur l'écran d'accueil pour la retrouver en un clic et recevoir vos bons plus facilement.</p>
+        <button id="help-install-btn" class="btn-primary help-install-btn" type="button">Voir les étapes d'installation</button>
+      </section>
+
+      <section class="help-section">
+        <h4>📱 Utilisation en caisse</h4>
+        <ul class="help-list">
+          <li>Présentez votre <strong>code-barres</strong>, le vendeur le scanne avec la douchette.</li>
+          <li>Cliquez sur un <strong>bon d'achat</strong> pour afficher son code-barres en caisse.</li>
+          <li>Votre prochain bon se déclenche automatiquement au seuil indiqué.</li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h4>🍎 Installation sur iPhone (Safari)</h4>
+        <ol class="help-list">
+          <li>Ouvrez ce lien dans <strong>Safari</strong> (pas Chrome ni Gmail).</li>
+          <li>Touchez le bouton <strong>Partager</strong> en bas de l'écran (carré avec une flèche).</li>
+          <li>Faites défiler et touchez <strong>« Sur l'écran d'accueil »</strong>.</li>
+          <li>Touchez <strong>Ajouter</strong> en haut à droite.</li>
+          <li>Votre carte apparaît comme une vraie application sur l'écran d'accueil.</li>
+        </ol>
+      </section>
+
+      <section class="help-section">
+        <h4>🤖 Installation sur Android</h4>
+        <ol class="help-list">
+          <li>Ouvrez ce lien de préférence dans <strong>Google Chrome</strong>.</li>
+          <li>Touchez les <strong>3 points</strong> en haut à droite.</li>
+          <li>Choisissez <strong>« Installer l'application »</strong> ou <strong>« Ajouter à l'écran d'accueil »</strong>.</li>
+          <li>Sur certains téléphones Android, notamment <strong>Samsung</strong>, <em>Google Play Protect</em> peut afficher le message <strong>« Appli non sécurisée bloquée »</strong>. <strong>Il ne faut pas appuyer directement sur OK.</strong> Appuyez d'abord sur <strong>« En savoir plus »</strong>, puis sur <strong>« Installer quand même »</strong>. L'application s'installe ensuite normalement.</li>
+        </ol>
+      </section>
+
+      <section class="help-section help-section-fallback">
+        <h4>💡 Si l'installation ne fonctionne pas</h4>
+        <p>Pas d'inquiétude&nbsp;: <strong>vous n'êtes pas obligé d'installer l'application</strong>. Vous pouvez tout à fait&nbsp;:</p>
+        <ul class="help-list">
+          <li>Garder le SMS reçu et cliquer sur le lien à chaque visite.</li>
+          <li>Ajouter ce lien à vos favoris dans votre navigateur.</li>
+          <li>Demander au vendeur de <strong>scanner directement le code-barres depuis votre SMS</strong> ou ce site web&nbsp;: la carte s'affiche pareil.</li>
+        </ul>
+      </section>
+    </div>
+  </div>
+
+  <!-- MODAL ACCUEIL PREMIÈRE VISITE -->
+  <div id="welcome-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
+    <div class="modal modal-welcome">
+      <button id="welcome-close" class="modal-close" aria-label="Fermer" type="button">&times;</button>
+      <h3 id="welcome-title">Voici votre carte fidélité</h3>
+      <p class="welcome-text">Pour rester informé de vos bons d'achat, promotions et informations de votre boutique, vous pouvez ajouter cette carte sur l'écran d'accueil de votre téléphone.</p>
+      <div class="welcome-actions">
+        <button id="welcome-install" class="btn-primary" type="button">Comment l'installer</button>
+        <button id="welcome-later" class="btn-secondary" type="button">Plus tard</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL BON D'ACHAT — barcode CODE128 pour scan caisse -->
+  <div id="bon-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="bon-modal-title">
+    <div class="modal modal-bon">
+      <button id="bon-modal-close" class="modal-close" aria-label="Fermer" type="button">&times;</button>
+      <p class="bon-modal-label">Bon d'achat</p>
+      <p id="bon-modal-amount" class="bon-modal-amount">0,00 €</p>
+      <div class="bon-modal-barcode-wrap">
+        <svg id="bon-modal-barcode"></svg>
+      </div>
+      <p id="bon-modal-code" class="bon-modal-code"></p>
+      <div class="bon-modal-meta">
+        <div><span>Émis le</span><strong id="bon-modal-date"></strong></div>
+        <div><span>Boutique</span><strong id="bon-modal-shop"></strong></div>
+      </div>
+      <p class="bon-modal-hint">Présentez ce code-barres en caisse</p>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       POLISH-17 — MODALES INSTALL UX
+       Toutes encapsulées dans #install-flow-root pour isolation.
+       Aucune classe partagée avec les modales existantes (préfixe .fe-).
+       ════════════════════════════════════════════════════════════════ -->
+
+  <!-- MODAL INSTALL PRINCIPALE -->
+  <div id="install-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="install-title">
+    <div class="modal modal-install">
+      <button id="install-modal-close" class="modal-close" aria-label="Fermer" type="button">&times;</button>
+      <div class="fe-install-icon">📱</div>
+      <h3 id="install-title">Ajoutez votre carte sur votre téléphone</h3>
+      <div class="fe-install-body">
+        <p>Pour recevoir vos bons d'achat, promotions et informations de votre boutique, ajoutez votre carte sur votre téléphone.</p>
+        <p>C'est simple, gratuit, et votre carte sera accessible en un clic en caisse.</p>
+        <p class="fe-install-warning"><strong>Important :</strong> Sans installation et sans notifications, vous risquez de ne pas recevoir vos bons d'achat et offres à temps.</p>
+      </div>
+      <div class="fe-install-actions">
+        <button id="install-show-steps" class="btn-primary" type="button">Voir les étapes d'installation</button>
+        <button id="install-dismiss" class="btn-secondary" type="button">J'ai compris</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL ÉCRAN CHOIX APPAREIL -->
+  <div id="device-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="device-title">
+    <div class="modal modal-device">
+      <button id="device-modal-close" class="modal-close" aria-label="Fermer" type="button">&times;</button>
+      <h3 id="device-title">Quel téléphone utilisez-vous&nbsp;?</h3>
+      <p class="fe-device-sub">Choisissez votre téléphone pour voir les bonnes étapes d'installation.</p>
+      <div class="fe-device-choices">
+        <button class="fe-device-btn" data-device="ios" type="button">
+          <span class="fe-device-emoji">🍎</span>
+          <span class="fe-device-label">iPhone</span>
+        </button>
+        <button class="fe-device-btn" data-device="android" type="button">
+          <span class="fe-device-emoji">🤖</span>
+          <span class="fe-device-label">Android / Samsung</span>
+        </button>
+        <button class="fe-device-btn" data-device="other" type="button">
+          <span class="fe-device-emoji">📲</span>
+          <span class="fe-device-label">Autre appareil</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL TUTORIEL iPhone -->
+  <div id="tuto-ios-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="tuto-ios-title">
+    <div class="modal modal-tuto">
+      <button class="fe-tuto-back" data-back="ios" type="button" aria-label="Retour">‹ Retour</button>
+      <button class="modal-close fe-tuto-close" data-close="ios" aria-label="Fermer" type="button">&times;</button>
+      <h3 id="tuto-ios-title">Installer sur iPhone</h3>
+
+      <ol class="fe-tuto-list">
+        <li class="fe-tuto-step">
+          <span class="fe-tuto-num">1</span>
+          <div class="fe-tuto-content">
+            <div class="fe-tuto-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/>
+                <polyline points="16 6 12 2 8 6"/>
+                <line x1="12" y1="2" x2="12" y2="15"/>
+              </svg>
+            </div>
+            <p>Touchez l'icône <strong>Partager</strong> (carré avec une flèche vers le haut).</p>
+            <p class="fe-tuto-hint">Elle peut se trouver près de l'adresse du site ou dans la barre du navigateur selon votre appareil.</p>
+          </div>
+        </li>
+        <li class="fe-tuto-step">
+          <span class="fe-tuto-num">2</span>
+          <div class="fe-tuto-content">
+            <div class="fe-tuto-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="5" cy="12" r="2"/>
+                <circle cx="12" cy="12" r="2"/>
+                <circle cx="19" cy="12" r="2"/>
+              </svg>
+            </div>
+            <p>Faites <strong>défiler les options</strong>.</p>
+            <p class="fe-tuto-hint">Si vous ne voyez pas l'option, touchez «&nbsp;Plus&nbsp;» ou «&nbsp;Voir plus&nbsp;».</p>
+          </div>
+        </li>
+        <li class="fe-tuto-step">
+          <span class="fe-tuto-num">3</span>
+          <div class="fe-tuto-content">
+            <div class="fe-tuto-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-4v-6h-6v6H5a2 2 0 0 1-2-2z"/>
+              </svg>
+            </div>
+            <p>Touchez <strong>«&nbsp;Sur l'écran d'accueil&nbsp;»</strong>.</p>
+            <p class="fe-tuto-hint">Ou «&nbsp;Ajouter à l'écran d'accueil&nbsp;» selon votre version.</p>
+          </div>
+        </li>
+        <li class="fe-tuto-step">
+          <span class="fe-tuto-num">4</span>
+          <div class="fe-tuto-content">
+            <div class="fe-tuto-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+            </div>
+            <p>Touchez <strong>Ajouter</strong>.</p>
+          </div>
+        </li>
+      </ol>
+
+      <p class="fe-tuto-final">✅ Votre carte apparaît maintenant comme une application sur votre iPhone.</p>
+    </div>
+  </div>
+
+  <!-- MODAL TUTORIEL Android / Samsung -->
+  <div id="tuto-android-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="tuto-android-title">
+    <div class="modal modal-tuto">
+      <button class="fe-tuto-back" data-back="android" type="button" aria-label="Retour">‹ Retour</button>
+      <button class="modal-close fe-tuto-close" data-close="android" aria-label="Fermer" type="button">&times;</button>
+      <h3 id="tuto-android-title">Installer sur Android / Samsung</h3>
+
+      <ol class="fe-tuto-list">
+        <li class="fe-tuto-step">
+          <span class="fe-tuto-num">1</span>
+          <div class="fe-tuto-content">
+            <div class="fe-tuto-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+                <line x1="4" y1="6" x2="20" y2="6"/>
+                <line x1="4" y1="12" x2="20" y2="12"/>
+                <line x1="4" y1="18" x2="20" y2="18"/>
+              </svg>
+            </div>
+            <p>Touchez le menu <strong>⋮</strong> (3 points).</p>
+          </div>
+        </li>
+        <li class="fe-tuto-step">
+          <span class="fe-tuto-num">2</span>
+          <div class="fe-tuto-content">
+            <div class="fe-tuto-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+            </div>
+            <p>Touchez <strong>«&nbsp;Installer l'application&nbsp;»</strong>.</p>
+            <p class="fe-tuto-hint">Ou «&nbsp;Ajouter à l'écran d'accueil&nbsp;».</p>
+          </div>
+        </li>
+        <li class="fe-tuto-step fe-tuto-step-warning">
+          <span class="fe-tuto-num fe-tuto-num-warning">3</span>
+          <div class="fe-tuto-content">
+            <div class="fe-tuto-icon fe-tuto-icon-warning" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <p>Si un message de sécurité apparaît :</p>
+            <p class="fe-tuto-hint"><strong>«&nbsp;Application non sécurisée&nbsp;»</strong> ou <strong>«&nbsp;Appli non sécurisée bloquée&nbsp;»</strong>.</p>
+            <p class="fe-tuto-warning"><strong>⚠️ Important : Ne touchez pas directement OK.</strong></p>
+          </div>
+        </li>
+        <li class="fe-tuto-step">
+          <span class="fe-tuto-num">4</span>
+          <div class="fe-tuto-content">
+            <div class="fe-tuto-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="16" x2="12" y2="12"/>
+                <line x1="12" y1="8" x2="12.01" y2="8"/>
+              </svg>
+            </div>
+            <p>Touchez <strong>«&nbsp;En savoir plus&nbsp;»</strong>.</p>
+          </div>
+        </li>
+        <li class="fe-tuto-step">
+          <span class="fe-tuto-num">5</span>
+          <div class="fe-tuto-content">
+            <div class="fe-tuto-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <p>Touchez <strong>«&nbsp;Installer quand même&nbsp;»</strong>.</p>
+          </div>
+        </li>
+      </ol>
+
+      <p class="fe-tuto-final">✅ Votre carte apparaît maintenant dans vos applications.</p>
+    </div>
+  </div>
+
+  <!-- MODAL TUTORIEL Autre appareil -->
+  <div id="tuto-other-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="tuto-other-title">
+    <div class="modal modal-tuto">
+      <button class="fe-tuto-back" data-back="other" type="button" aria-label="Retour">‹ Retour</button>
+      <button class="modal-close fe-tuto-close" data-close="other" aria-label="Fermer" type="button">&times;</button>
+      <h3 id="tuto-other-title">Installer sur votre appareil</h3>
+
+      <div class="fe-tuto-other-content">
+        <p>Ouvrez le menu de votre navigateur puis cherchez :</p>
+        <p class="fe-tuto-other-options">«&nbsp;<strong>Installer l'application</strong>&nbsp;» ou «&nbsp;<strong>Ajouter à l'écran d'accueil</strong>&nbsp;».</p>
+        <p class="fe-tuto-other-fallback">Si vous ne trouvez pas l'option, demandez de l'aide à votre commerçant.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIBS -->
+  <script src="/assets/js/qrcode.min.js"></script>
+  <script src="/assets/js/jsbarcode.min.js"></script>
+
+  <!-- APP -->
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/theme.js"></script>
+  <script src="/assets/js/ma-carte.js"></script>
+</body>
+</html>
