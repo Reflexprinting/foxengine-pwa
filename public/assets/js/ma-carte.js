@@ -542,6 +542,17 @@
       showState('state-ready');
       // Modale d'accueil : uniquement à la 1ʳᵉ visite ET carte chargée OK
       maybeShowWelcome();
+
+      // ════════════════════════════════════════════════════════════
+      // POLISH-17 — Hook install flow (après render carte + welcome)
+      // ════════════════════════════════════════════════════════════
+      if (window.FoxInstall && typeof window.FoxInstall.init === 'function') {
+        try {
+          window.FoxInstall.init(data);
+        } catch (e) {
+          console.warn('[ma-carte] FoxInstall.init failed', e);
+        }
+      }
     } catch (e) {
       console.error('[ma-carte] erreur', e);
       showState('state-error');
@@ -565,4 +576,387 @@
   }
 
   document.addEventListener('DOMContentLoaded', init);
+})();
+
+
+// ════════════════════════════════════════════════════════════════════
+// POLISH-17 — Module pwaInstallFlow (FoxInstall)
+// ════════════════════════════════════════════════════════════════════
+// Module isolé pour gérer :
+//   - détection display-mode (browser / standalone / minimal-ui)
+//   - détection plateforme (ios / android / desktop)
+//   - tracking backend via registerPushDevice (stub, sans OneSignal)
+//   - modale install (texte business validé)
+//   - écran choix appareil
+//   - 3 tutoriels (iOS / Android / Autre)
+//   - section "Installer ma carte" dans modale Aide existante
+//   - snooze 7j + max 3 refus auto
+//
+// Ce module ne touche PAS au code principal de ma-carte.js.
+// Il se branche via window.FoxInstall.init(data) appelé dans init().
+// ════════════════════════════════════════════════════════════════════
+(function () {
+  'use strict';
+
+  // ── Configuration ───────────────────────────────────────────────
+  var APP_VERSION       = 'phase3-polish-17';
+  var REGISTER_ENDPOINT = 'https://www.my-foxengine.com/_functions/registerPushDevice';
+  var WELCOME_DELAY_MS  = 1500;     // délai après welcome fermé
+  var SNOOZE_DAYS       = 7;
+  var MAX_DISMISS_AUTO  = 3;
+
+  // ── Clés localStorage (préfixe fe_pwa_install_*) ────────────────
+  var LS_DISMISSED_COUNT     = 'fe_pwa_install_dismissed_count';
+  var LS_LAST_DISMISSED_AT   = 'fe_pwa_install_last_dismissed_at';
+  var LS_SHOWN_COUNT         = 'fe_pwa_install_shown_count';
+
+  // ── État interne ────────────────────────────────────────────────
+  var _carteData     = null;
+  var _displayMode   = 'browser';
+  var _platform      = 'desktop';
+
+  // ── Détection ───────────────────────────────────────────────────
+  function detectDisplayMode() {
+    try {
+      if (window.navigator.standalone === true) return 'standalone';   // iOS Safari
+      if (window.matchMedia &&
+          window.matchMedia('(display-mode: standalone)').matches) {
+        return 'standalone';
+      }
+      if (window.matchMedia &&
+          window.matchMedia('(display-mode: minimal-ui)').matches) {
+        return 'minimal-ui';
+      }
+    } catch (_) { /* ignore */ }
+    return 'browser';
+  }
+
+  function detectPlatform() {
+    var ua = (navigator.userAgent || '').toString();
+    // iPad moderne : userAgent indique "Macintosh" mais on a touch → traité iOS
+    var isIPad = /iPad|Macintosh/.test(ua) && 'ontouchend' in document;
+    if (/iPhone|iPod/.test(ua) || isIPad) return 'ios';
+    if (/Android/i.test(ua)) return 'android';
+    return 'desktop';
+  }
+
+  // ── localStorage (safe) ─────────────────────────────────────────
+  function lsGetNumber(key) {
+    try {
+      var v = parseInt(localStorage.getItem(key) || '0', 10);
+      return isNaN(v) ? 0 : v;
+    } catch (_) { return 0; }
+  }
+  function lsGetString(key) {
+    try { return localStorage.getItem(key) || ''; }
+    catch (_) { return ''; }
+  }
+  function lsSet(key, value) {
+    try { localStorage.setItem(key, String(value)); }
+    catch (_) { /* ignore */ }
+  }
+
+  // ── Logique snooze ──────────────────────────────────────────────
+  function isSnoozedNow() {
+    var lastIso = lsGetString(LS_LAST_DISMISSED_AT);
+    if (!lastIso) return false;
+    try {
+      var last = new Date(lastIso);
+      if (isNaN(last.getTime())) return false;
+      var diffMs  = Date.now() - last.getTime();
+      var diffDays = diffMs / (24 * 60 * 60 * 1000);
+      return diffDays < SNOOZE_DAYS;
+    } catch (_) { return false; }
+  }
+
+  function reachedMaxDismiss() {
+    return lsGetNumber(LS_DISMISSED_COUNT) >= MAX_DISMISS_AUTO;
+  }
+
+  function recordDismissedLocal() {
+    var c = lsGetNumber(LS_DISMISSED_COUNT) + 1;
+    lsSet(LS_DISMISSED_COUNT, c);
+    lsSet(LS_LAST_DISMISSED_AT, new Date().toISOString());
+  }
+
+  function recordShownLocal() {
+    var c = lsGetNumber(LS_SHOWN_COUNT) + 1;
+    lsSet(LS_SHOWN_COUNT, c);
+  }
+
+  // ── Backend tracking (silencieux) ───────────────────────────────
+  // Ne JAMAIS bloquer ni faire échouer la PWA si registerPushDevice
+  // est down. Erreurs absorbées en console.warn uniquement.
+  function postRegister(extraFlags) {
+    if (!_carteData || !_carteData.code_client || !_carteData.boutique_id) {
+      console.warn('[FoxInstall] tracking skipped: missing code_client or boutique_id');
+      return;
+    }
+
+    var payload = {
+      codeClient:        String(_carteData.code_client),
+      boutiqueId:        String(_carteData.boutique_id),
+      permissionStatus:  'default',
+      pushEnabled:       false,
+      subscriptionId:    null,
+      oneSignalUserId:   null,
+      platform:          _platform,
+      appVersion:        APP_VERSION,
+      userAgent:         (navigator.userAgent || '').substring(0, 250),
+      pwaInstalled:      (_displayMode === 'standalone'),
+      displayMode:       _displayMode,
+      installPromptShown:     !!(extraFlags && extraFlags.shown),
+      installPromptDismissed: !!(extraFlags && extraFlags.dismissed)
+    };
+
+    try {
+      fetch(REGISTER_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        credentials: 'omit',
+        cache: 'no-store',
+        mode: 'cors',
+        keepalive: true
+      }).then(function (res) {
+        if (!res.ok) {
+          console.warn('[FoxInstall] register HTTP ' + res.status);
+        }
+      }).catch(function (err) {
+        // Silencieux : erreur réseau, bloqueurs CORS, offline, etc.
+        console.warn('[FoxInstall] register fetch failed', err);
+      });
+    } catch (e) {
+      console.warn('[FoxInstall] register exception', e);
+    }
+  }
+
+  // ── DOM helpers ─────────────────────────────────────────────────
+  function $(id) { return document.getElementById(id); }
+
+  function openModal(id) {
+    var el = $(id);
+    if (el) el.classList.add('open');
+  }
+  function closeModal(id) {
+    var el = $(id);
+    if (el) el.classList.remove('open');
+  }
+  function closeAllInstallModals() {
+    closeModal('install-modal');
+    closeModal('device-modal');
+    closeModal('tuto-ios-modal');
+    closeModal('tuto-android-modal');
+    closeModal('tuto-other-modal');
+  }
+
+  // ── Ouverture flow depuis Aide ou auto ──────────────────────────
+  function openInstallFlowFromHelp() {
+    // Depuis Aide : on saute la modale install (l'utilisateur a déjà
+    // explicitement choisi de voir les étapes) et on ouvre directement
+    // le choix appareil.
+    closeModal('help-modal');
+    recordShownLocal();
+    postRegister({ shown: true });
+    openModal('device-modal');
+  }
+
+  function openInstallFlowAuto() {
+    // Auto après welcome : ouvre la modale install d'abord
+    openModal('install-modal');
+  }
+
+  function openTutorialFor(device) {
+    closeModal('device-modal');
+    if (device === 'ios') {
+      openModal('tuto-ios-modal');
+    } else if (device === 'android') {
+      openModal('tuto-android-modal');
+    } else {
+      openModal('tuto-other-modal');
+    }
+  }
+
+  // ── Wiring boutons ──────────────────────────────────────────────
+  function wireInstallButtons() {
+    // Bouton "Voir les étapes d'installation" en haut de la modale Aide
+    var helpInstallBtn = $('help-install-btn');
+    if (helpInstallBtn) {
+      helpInstallBtn.addEventListener('click', openInstallFlowFromHelp);
+    }
+
+    // Modale install — bouton "Voir les étapes d'installation"
+    var showSteps = $('install-show-steps');
+    if (showSteps) {
+      showSteps.addEventListener('click', function () {
+        closeModal('install-modal');
+        recordShownLocal();
+        postRegister({ shown: true });
+        openModal('device-modal');
+      });
+    }
+
+    // Modale install — bouton "J'ai compris"
+    var dismissBtn = $('install-dismiss');
+    if (dismissBtn) {
+      dismissBtn.addEventListener('click', function () {
+        closeModal('install-modal');
+        recordDismissedLocal();
+        postRegister({ dismissed: true });
+      });
+    }
+
+    // Modale install — close (X) = équivalent dismiss
+    var installClose = $('install-modal-close');
+    if (installClose) {
+      installClose.addEventListener('click', function () {
+        closeModal('install-modal');
+        recordDismissedLocal();
+        postRegister({ dismissed: true });
+      });
+    }
+    var installModal = $('install-modal');
+    if (installModal) {
+      installModal.addEventListener('click', function (e) {
+        if (e.target.id === 'install-modal') {
+          closeModal('install-modal');
+          recordDismissedLocal();
+          postRegister({ dismissed: true });
+        }
+      });
+    }
+
+    // Modale choix appareil — boutons device
+    var deviceModal = $('device-modal');
+    if (deviceModal) {
+      var deviceBtns = deviceModal.querySelectorAll('.fe-device-btn');
+      Array.prototype.forEach.call(deviceBtns, function (btn) {
+        btn.addEventListener('click', function () {
+          var device = btn.getAttribute('data-device') || 'other';
+          openTutorialFor(device);
+        });
+      });
+
+      // Close (X)
+      var deviceClose = $('device-modal-close');
+      if (deviceClose) {
+        deviceClose.addEventListener('click', function () {
+          closeModal('device-modal');
+        });
+      }
+      // Click outside
+      deviceModal.addEventListener('click', function (e) {
+        if (e.target.id === 'device-modal') closeModal('device-modal');
+      });
+    }
+
+    // Tutoriels — boutons Retour (vers choix appareil)
+    var backBtns = document.querySelectorAll('.fe-tuto-back');
+    Array.prototype.forEach.call(backBtns, function (btn) {
+      btn.addEventListener('click', function () {
+        var which = btn.getAttribute('data-back');
+        if (which === 'ios')     closeModal('tuto-ios-modal');
+        if (which === 'android') closeModal('tuto-android-modal');
+        if (which === 'other')   closeModal('tuto-other-modal');
+        openModal('device-modal');
+      });
+    });
+
+    // Tutoriels — boutons Fermer (X)
+    var closeBtns = document.querySelectorAll('.fe-tuto-close');
+    Array.prototype.forEach.call(closeBtns, function (btn) {
+      btn.addEventListener('click', function () {
+        var which = btn.getAttribute('data-close');
+        if (which === 'ios')     closeModal('tuto-ios-modal');
+        if (which === 'android') closeModal('tuto-android-modal');
+        if (which === 'other')   closeModal('tuto-other-modal');
+      });
+    });
+
+    // Click outside tutoriels
+    var tutoIds = ['tuto-ios-modal', 'tuto-android-modal', 'tuto-other-modal'];
+    tutoIds.forEach(function (id) {
+      var el = $(id);
+      if (el) {
+        el.addEventListener('click', function (e) {
+          if (e.target.id === id) closeModal(id);
+        });
+      }
+    });
+
+    // ESC ferme toutes les modales install
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeAllInstallModals();
+    });
+  }
+
+  // ── Logique d'affichage automatique ─────────────────────────────
+  function shouldShowAutoModal() {
+    // 1. Mode standalone : déjà installé → pas de modale
+    if (_displayMode === 'standalone') return false;
+
+    // 2. Desktop : pas de modale auto (accessible via Aide)
+    if (_platform === 'desktop') return false;
+
+    // 3. Snooze 7 jours actif
+    if (isSnoozedNow()) return false;
+
+    // 4. Trop de refus comptabilisés
+    if (reachedMaxDismiss()) return false;
+
+    return true;
+  }
+
+  function tryShowAutoAfterWelcome() {
+    if (!shouldShowAutoModal()) return;
+
+    // On vérifie que la carte est bien rendered avant d'afficher
+    var stateReady = $('state-ready');
+    if (!stateReady || !stateReady.classList.contains('active')) return;
+
+    // Si la modale welcome est ouverte, on attend qu'elle soit fermée.
+    // Sinon on enchaîne directement avec un petit délai esthétique.
+    var welcomeModal = $('welcome-modal');
+    if (welcomeModal && welcomeModal.classList.contains('open')) {
+      // Observer la fermeture du welcome via mutation observer
+      var observer = new MutationObserver(function () {
+        if (!welcomeModal.classList.contains('open')) {
+          observer.disconnect();
+          setTimeout(function () {
+            // Re-vérifier les conditions au moment de l'affichage
+            if (shouldShowAutoModal()) openInstallFlowAuto();
+          }, WELCOME_DELAY_MS);
+        }
+      });
+      observer.observe(welcomeModal, {
+        attributes: true,
+        attributeFilter: ['class']
+      });
+    } else {
+      // Pas de welcome ouverte → délai court puis affichage
+      setTimeout(function () {
+        if (shouldShowAutoModal()) openInstallFlowAuto();
+      }, WELCOME_DELAY_MS);
+    }
+  }
+
+  // ── API publique ────────────────────────────────────────────────
+  window.FoxInstall = {
+    init: function (data) {
+      _carteData   = data || null;
+      _displayMode = detectDisplayMode();
+      _platform    = detectPlatform();
+
+      // Tracking initial : à chaque ouverture PWA, on signale lastPwaOpenAt
+      // (et pwaInstalled si standalone). Pas de flag shown/dismissed.
+      postRegister({});
+
+      // Wire des boutons (bouton Aide + modales install)
+      wireInstallButtons();
+
+      // Affichage auto modale install si éligible
+      tryShowAutoAfterWelcome();
+    }
+  };
+
 })();
