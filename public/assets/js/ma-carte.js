@@ -59,20 +59,23 @@
     // pour maximiser la chance qu'iOS conserve le code après installation.
 
     let code = '';
+    let sig = '';   // signature HMAC obligatoire pour Supabase (sécurité)
 
-    // 1. Query string ?code=XXX
+    // 1. Query string ?code=XXX&sig=YYY
     try {
       const params = new URLSearchParams(window.location.search);
       code = (params.get('code') || '').trim();
+      sig  = (params.get('sig') || params.get('s') || '').trim();
     } catch (_) { /* ignore */ }
 
-    // 2. Hash #code=XXX  (résiste mieux aux relances PWA installée iOS)
+    // 2. Hash #code=XXX&sig=YYY  (résiste mieux aux relances PWA installée iOS)
     if (!code) {
       try {
         const rawHash = (window.location.hash || '').replace(/^#/, '');
         if (rawHash) {
           const hashParams = new URLSearchParams(rawHash);
           code = (hashParams.get('code') || '').trim();
+          if (!sig) sig = (hashParams.get('sig') || hashParams.get('s') || '').trim();
         }
       } catch (_) { /* ignore */ }
     }
@@ -80,6 +83,7 @@
     // 3. Fallback localStorage (PC / Android Chrome / contextes non isolés)
     if (!code) {
       code = safeStorageGet();
+      if (!sig) { try { sig = (localStorage.getItem('fe_card_sig') || '').trim(); } catch (_) {} }
     }
 
     // 4. Fallback cookie (iOS standalone : meilleur partage avec Safari)
@@ -92,12 +96,15 @@
       safeStorageSet(code);
       // Mémoriser aussi côté cookie (utile iOS PWA installée)
       safeCookieSet(code);
+      // Mémoriser la signature (indispensable pour recharger la carte plus tard)
+      if (sig) { try { localStorage.setItem('fe_card_sig', sig); } catch (_) {} }
 
-      // Réinjecter ?code=XXX dans l'URL pour cohérence (sans recharger).
-      // On préserve le hash existant pour ne pas perdre #code=XXX si déjà là.
+      // Réinjecter ?code=XXX&sig=YYY dans l'URL pour cohérence (sans recharger).
+      // IMPORTANT : on PRÉSERVE le sig, sinon Supabase renvoie "LIEN_INVALIDE".
       try {
         const newUrl = window.location.pathname
                      + '?code=' + encodeURIComponent(code)
+                     + (sig ? '&sig=' + encodeURIComponent(sig) : '')
                      + (window.location.hash || '');
         window.history.replaceState(null, '', newUrl);
       } catch (_) { /* history API peut être restreint */ }
