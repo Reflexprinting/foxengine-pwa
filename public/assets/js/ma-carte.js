@@ -426,6 +426,21 @@
       if (e.target.id === 'passages-modal') $('passages-modal').classList.remove('open');
     });
 
+    // Activer / réactiver les notifications (force la resouscription même si iOS dit "accordé")
+    if ($('notif-btn')) $('notif-btn').addEventListener('click', () => {
+      const standalone = (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true);
+      if (!standalone) {
+        if ($('notif-hint')) $('notif-hint').textContent = 'Installez d’abord l’app sur votre écran d’accueil (bouton Partager → « Sur l’écran d’accueil »).';
+        return;
+      }
+      if (window.FoxPush && typeof window.FoxPush.requestPermission === 'function') {
+        window.FoxPush.requestPermission();
+        if ($('notif-hint')) $('notif-hint').textContent = 'Activation en cours… si rien ne se passe, fermez et rouvrez l’app.';
+      } else if ($('notif-hint')) {
+        $('notif-hint').textContent = 'Notifications indisponibles pour le moment.';
+      }
+    });
+
     // Bon
     $('bon-modal-close').addEventListener('click', closeBonModal);
     $('bon-modal').addEventListener('click', (e) => {
@@ -1669,13 +1684,19 @@
 
     var OneSignal = window.OneSignal;
 
+    function forceSub() {
+      // Force l'abonnement + re-tag même si iOS dit déjà "accordé"
+      try { OneSignal.User.PushSubscription.optIn(); } catch (e) {}
+      try { applyTags(OneSignal); } catch (e) {}
+      if (_carteData && _carteData.code_client) { try { OneSignal.login(String(_carteData.code_client)); } catch (e) {} }
+      readAndPostState(OneSignal);
+      hideBanner();
+      updateAideStatus(OneSignal);
+    }
     try {
-      OneSignal.Notifications.requestPermission().then(function (granted) {
-        readAndPostState(OneSignal);
-        hideBanner();
-        updateAideStatus(OneSignal);
-      }).catch(function (err) {
+      OneSignal.Notifications.requestPermission().then(forceSub).catch(function (err) {
         console.warn('[FoxPush v2] requestPermission failed', err);
+        forceSub();
       });
     } catch (e) {
       console.warn('[FoxPush v2] requestPermission exception', e);
