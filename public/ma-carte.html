@@ -128,10 +128,9 @@
         <div id="bons-list" class="bons-list"></div>
       </section>
 
-      <!-- DERNIERS PASSAGES -->
+      <!-- DERNIERS PASSAGES (bouton → modale) -->
       <section class="section">
-        <h2 class="section-title">Mes derniers passages</h2>
-        <div id="passages-list" class="passages-list"></div>
+        <button id="passages-btn" class="btn-primary" type="button" style="width:100%">🕑 Voir mes derniers passages</button>
       </section>
 
       <!-- HORAIRES BOUTIQUE -->
@@ -147,6 +146,15 @@
 
     </section>
 
+  </div>
+
+  <!-- MODAL DERNIERS PASSAGES -->
+  <div id="passages-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="passages-title">
+    <div class="modal">
+      <button id="passages-close" class="modal-close" aria-label="Fermer" type="button">&times;</button>
+      <h3 id="passages-title">Mes derniers passages</h3>
+      <div id="passages-list" class="passages-list"></div>
+    </div>
   </div>
 
   <!-- MODAL AIDE -->

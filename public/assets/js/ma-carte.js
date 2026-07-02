@@ -419,6 +419,13 @@
       if (e.target.id === 'help-modal') $('help-modal').classList.remove('open');
     });
 
+    // Derniers passages (bouton -> modale)
+    if ($('passages-btn')) $('passages-btn').addEventListener('click', () => $('passages-modal').classList.add('open'));
+    if ($('passages-close')) $('passages-close').addEventListener('click', () => $('passages-modal').classList.remove('open'));
+    if ($('passages-modal')) $('passages-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'passages-modal') $('passages-modal').classList.remove('open');
+    });
+
     // Bon
     $('bon-modal-close').addEventListener('click', closeBonModal);
     $('bon-modal').addEventListener('click', (e) => {
