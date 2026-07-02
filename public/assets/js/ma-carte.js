@@ -628,41 +628,49 @@
     ov.addEventListener('click', function (e) { if (e.target.id === 'promo-splash') closeIt(); });
   }
 
-  // Carte promo persistante dans l'app (visuel cliquable → rouvre le plein écran)
-  function renderPromoCard(promo) {
-    var host = document.getElementById('promo-card');
-    if (!host) return;
-    if (!promo || (!promo.image_url && !promo.titre)) { host.style.display = 'none'; host.innerHTML = ''; return; }
+  // Une carte promo cliquable (retourne l'élément DOM)
+  function buildPromoCardEl(promo) {
     var esc = _promoEsc;
     var visuel = promo.image_url
       ? '<img src="' + esc(promo.image_url) + '" alt="Promo" style="width:100%;max-height:180px;object-fit:cover;display:block">'
       : '<div style="padding:22px 16px;background:linear-gradient(135deg,#ef8f1c,#c0392b);color:#fff;font-weight:800;font-size:18px;text-align:center">' + esc(promo.titre || 'Promo') + '</div>';
-    host.innerHTML =
-      '<div style="cursor:pointer;border-radius:16px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.12);border:1px solid rgba(0,0,0,.06)">'
-      + visuel
+    var el = document.createElement('div');
+    el.style.cssText = 'cursor:pointer;border-radius:16px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.12);border:1px solid rgba(0,0,0,.06);margin-bottom:12px';
+    el.innerHTML = visuel
       + '<div style="padding:10px 14px;background:#fff;display:flex;align-items:center;justify-content:space-between;gap:10px">'
       +   '<span style="font-weight:700;color:#111">' + esc(promo.titre || 'Promo du moment') + '</span>'
       +   '<span style="color:#2f74d0;font-weight:700;white-space:nowrap">Voir ›</span>'
-      + '</div></div>';
+      + '</div>';
+    el.onclick = function () { openPromoOverlay(promo); };
+    return el;
+  }
+
+  // Rend TOUTES les promos actives dans l'app (cartes empilées, cliquables)
+  function renderPromoCards(list) {
+    var host = document.getElementById('promo-card');
+    if (!host) return;
+    host.innerHTML = '';
+    var promos = (Array.isArray(list) ? list : []).filter(function (p) { return p && (p.image_url || p.titre); });
+    if (!promos.length) { host.style.display = 'none'; return; }
+    for (var i = 0; i < promos.length; i++) host.appendChild(buildPromoCardEl(promos[i]));
     host.style.display = 'block';
-    host.firstChild.onclick = function () { openPromoOverlay(promo); };
   }
 
   async function showPromoDuJour(boutique) {
     if (!boutique) return;
     try {
       var list = await foxRpc('rpc_promos_active', { p_boutique: boutique });
-      if (!Array.isArray(list) || !list.length) { renderPromoCard(null); return; }
-      var promo = null;
-      for (var i = 0; i < list.length; i++) { if (list[i] && list[i].image_url) { promo = list[i]; break; } }
-      if (!promo) promo = list[0];
-      _promoCurrent = promo;
-      // Carte persistante : toujours visible
-      renderPromoCard(promo);
-      // Splash plein écran : 1×/jour
+      if (!Array.isArray(list) || !list.length) { renderPromoCards([]); return; }
+      _promoCurrent = list;
+      // Cartes persistantes : TOUTES les promos actives, toujours visibles
+      renderPromoCards(list);
+      // Splash plein écran : 1×/jour, la 1re promo avec image (sinon la 1re)
+      var featured = null;
+      for (var i = 0; i < list.length; i++) { if (list[i] && list[i].image_url) { featured = list[i]; break; } }
+      if (!featured) featured = list[0];
       var today = new Date().toISOString().slice(0, 10);
       if (localStorage.getItem('fox_promo_day') !== today) {
-        openPromoOverlay(promo);
+        openPromoOverlay(featured);
         try { localStorage.setItem('fox_promo_day', today); } catch (e) {}
       }
     } catch (e) {}
