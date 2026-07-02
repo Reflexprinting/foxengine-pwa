@@ -516,13 +516,66 @@
   }
 
   // ── INIT ───────────────────────────────────────────
+  // ── Retrouver ma carte par SMS (OTP) : quand l'app est ouverte sans code (iPhone) ──
+  var FOX_FN = 'https://cxbyblnzlivnadyhdwtz.supabase.co/functions/v1/card-recover';
+  var FOX_ANON = 'sb_publishable_XjTXt9N9A-zBhu6lZfrxXw_Hxwfi3wp';
+  var RECPHONE = '';
+  async function foxFn(action, extra) {
+    var r = await fetch(FOX_FN, { method: 'POST',
+      headers: { apikey: FOX_ANON, Authorization: 'Bearer ' + FOX_ANON, 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ action: action }, extra || {})) });
+    return r.json();
+  }
+  function showRecover(msg) {
+    showState('state-error');
+    var m = $('error-msg'); if (m) m.textContent = msg || 'Retrouvez votre carte avec votre numéro de téléphone :';
+    var z = $('recover-zone'); if (!z) return;
+    z.innerHTML =
+      '<div id="rec-step1" style="margin-top:16px">' +
+        '<input id="rec-phone" type="tel" inputmode="tel" placeholder="Votre téléphone" style="width:100%;padding:13px;border:2px solid #d7dbe0;border-radius:12px;font-size:17px;box-sizing:border-box">' +
+        '<button id="rec-send" style="width:100%;margin-top:10px;padding:14px;border:none;border-radius:12px;font-size:16px;font-weight:700;color:#fff;background:#1c63c4;cursor:pointer">Recevoir mon code par SMS</button>' +
+      '</div>' +
+      '<div id="rec-step2" style="display:none;margin-top:16px">' +
+        '<input id="rec-otp" type="tel" inputmode="numeric" maxlength="6" placeholder="Code à 6 chiffres" style="width:100%;padding:13px;border:2px solid #d7dbe0;border-radius:12px;font-size:22px;font-weight:800;text-align:center;letter-spacing:6px;box-sizing:border-box">' +
+        '<button id="rec-verify" style="width:100%;margin-top:10px;padding:14px;border:none;border-radius:12px;font-size:16px;font-weight:700;color:#fff;background:#1a9e5a;cursor:pointer">Valider</button>' +
+      '</div>' +
+      '<p id="rec-msg" style="margin-top:10px;font-size:13px;color:#666"></p>';
+    $('rec-send').onclick = recoverRequest;
+  }
+  async function recoverRequest() {
+    var p = ($('rec-phone').value || '').trim();
+    if (p.replace(/\D/g, '').length < 9) { $('rec-msg').textContent = 'Numéro invalide.'; return; }
+    RECPHONE = p; $('rec-msg').textContent = 'Envoi du code…';
+    try { await foxFn('request', { phone: p }); } catch (e) {}
+    $('rec-step1').style.display = 'none'; $('rec-step2').style.display = '';
+    $('rec-msg').textContent = 'Si ce numéro a une carte, un SMS vient de partir.';
+    $('rec-verify').onclick = recoverVerify;
+    var o = $('rec-otp'); if (o) o.focus();
+  }
+  async function recoverVerify() {
+    var otp = ($('rec-otp').value || '').replace(/\D/g, '');
+    if (otp.length < 4) { $('rec-msg').textContent = 'Entrez le code reçu.'; return; }
+    $('rec-msg').textContent = 'Vérification…';
+    var r; try { r = await foxFn('verify', { phone: RECPHONE, otp: otp }); } catch (e) { $('rec-msg').textContent = 'Service indisponible.'; return; }
+    if (r && r.ok && r.code) {
+      try { localStorage.setItem('foxengine_client_code', r.code); } catch (e) {}
+      try { localStorage.setItem('fe_card_sig', r.sig || ''); } catch (e) {}
+      $('rec-msg').textContent = 'Carte retrouvée ✓';
+      location.replace('/ma-carte.html?code=' + encodeURIComponent(r.code) + (r.sig ? '&sig=' + encodeURIComponent(r.sig) : ''));
+      return;
+    }
+    var errs = { AUCUN_CODE: 'Aucun code en cours. Renvoyez un code.', CODE_EXPIRE: 'Code expiré. Renvoyez un code.',
+      TROP_ESSAIS: 'Trop d’essais. Renvoyez un code.', CODE_INVALIDE: 'Code invalide.',
+      CODE_INCORRECT: 'Code incorrect.' + (r && r.restant != null ? ' Essais restants : ' + r.restant : '') };
+    $('rec-msg').textContent = (r && errs[r.error]) || 'Échec. Réessayez.';
+  }
+
   async function init() {
     bindModals();
 
     const code = getCodeFromUrl();
     if (!code) {
-      showState('state-error');
-      $('error-msg').textContent = 'Aucune carte fidélité n\'a pu être chargée. Ouvrez le lien reçu par SMS ou demandez au vendeur de vous le renvoyer.';
+      showRecover('Ouvrez le lien reçu par SMS, ou retrouvez votre carte avec votre numéro de téléphone :');
       return;
     }
 
@@ -573,10 +626,12 @@
       }
     } catch (e) {
       console.error('[ma-carte] erreur', e);
+      if (e.code === 'CLIENT_NOT_FOUND' || e.code === 'LIEN_INVALIDE') {
+        showRecover('Lien expiré ou invalide. Retrouvez votre carte avec votre numéro de téléphone :');
+        return;
+      }
       showState('state-error');
-      if (e.code === 'CLIENT_NOT_FOUND') {
-        $('error-msg').textContent = 'Carte introuvable. Vérifiez le lien reçu par SMS.';
-      } else if (e.code === 'RATE_LIMITED') {
+      if (e.code === 'RATE_LIMITED') {
         $('error-msg').textContent = 'Trop de requêtes. Réessayez dans un instant.';
       } else {
         $('error-msg').textContent = 'Impossible de charger votre carte. Réessayez plus tard.';
