@@ -570,6 +570,41 @@
     $('rec-msg').textContent = (r && errs[r.error]) || 'Échec. Réessayez.';
   }
 
+  // ── Promo du jour : splash plein écran (image), 1×/jour à l'ouverture ──
+  async function foxRpc(name, body) {
+    var r = await fetch('https://cxbyblnzlivnadyhdwtz.supabase.co/rest/v1/rpc/' + name, {
+      method: 'POST', headers: { apikey: FOX_ANON, Authorization: 'Bearer ' + FOX_ANON, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {}) });
+    return r.json();
+  }
+  async function showPromoDuJour(boutique) {
+    if (!boutique) return;
+    try {
+      var today = new Date().toISOString().slice(0, 10);
+      if (localStorage.getItem('fox_promo_day') === today) return;   // déjà vue aujourd'hui
+      var list = await foxRpc('rpc_promos_active', { p_boutique: boutique });
+      if (!Array.isArray(list) || !list.length) return;
+      var promo = null;
+      for (var i = 0; i < list.length; i++) { if (list[i] && list[i].image_url) { promo = list[i]; break; } }
+      if (!promo) promo = list[0];
+      var ov = document.createElement('div');
+      ov.id = 'promo-splash';
+      ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(10,12,20,.93);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px';
+      var inner;
+      if (promo.image_url) {
+        inner = '<img src="' + promo.image_url + '" alt="Promo" style="max-width:100%;max-height:78vh;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.5)">';
+      } else {
+        inner = '<div style="background:#fff;color:#111;border-radius:16px;padding:24px;max-width:90%;text-align:center"><div style="font-size:22px;font-weight:800;margin-bottom:8px">' + (promo.titre || '') + '</div><div>' + (promo.texte || '') + '</div></div>';
+      }
+      ov.innerHTML = inner + '<button id="promo-close" style="margin-top:18px;padding:13px 28px;border:none;border-radius:12px;font-size:16px;font-weight:700;background:#fff;color:#111;cursor:pointer">Voir ma carte</button>';
+      document.body.appendChild(ov);
+      try { localStorage.setItem('fox_promo_day', today); } catch (e) {}
+      function closeIt() { var el = document.getElementById('promo-splash'); if (el) el.remove(); }
+      document.getElementById('promo-close').onclick = closeIt;
+      ov.addEventListener('click', function (e) { if (e.target.id === 'promo-splash') closeIt(); });
+    } catch (e) {}
+  }
+
   async function init() {
     bindModals();
 
@@ -602,6 +637,8 @@
       showState('state-ready');
       // Modale d'accueil : uniquement à la 1ʳᵉ visite ET carte chargée OK
       maybeShowWelcome();
+      // Promo du jour : splash plein écran (image), 1×/jour
+      showPromoDuJour(data.boutique && (data.boutique.boutiqueId || data.boutique));
 
       // ════════════════════════════════════════════════════════════
       // POLISH-17 — Hook install flow (après render carte + welcome)
