@@ -599,31 +599,72 @@
       body: JSON.stringify(body || {}) });
     return r.json();
   }
+  var _promoCurrent = null;
+  function _promoEsc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
+
+  // Ouvre le visuel plein écran de la promo (image + titre + texte)
+  function openPromoOverlay(promo) {
+    if (!promo) return;
+    if (document.getElementById('promo-splash')) return;
+    var esc = _promoEsc;
+    var inner = '';
+    if (promo.image_url) {
+      inner += '<img src="' + esc(promo.image_url) + '" alt="Promo" style="max-width:100%;max-height:62vh;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.5)">';
+    }
+    if (promo.titre || promo.texte) {
+      inner += '<div style="background:#fff;color:#111;border-radius:16px;padding:18px 22px;max-width:92%;text-align:center;margin-top:' + (promo.image_url ? '14px' : '0') + '">'
+        + (promo.titre ? '<div style="font-size:21px;font-weight:800;margin-bottom:6px">' + esc(promo.titre) + '</div>' : '')
+        + (promo.texte ? '<div style="font-size:15px;line-height:1.45;white-space:pre-wrap">' + esc(promo.texte) + '</div>' : '')
+        + '</div>';
+    }
+    if (!inner) return;
+    var ov = document.createElement('div');
+    ov.id = 'promo-splash';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(10,12,20,.93);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;overflow:auto';
+    ov.innerHTML = inner + '<button id="promo-close" style="margin-top:18px;padding:13px 28px;border:none;border-radius:12px;font-size:16px;font-weight:700;background:#fff;color:#111;cursor:pointer">Fermer</button>';
+    document.body.appendChild(ov);
+    function closeIt() { var el = document.getElementById('promo-splash'); if (el) el.remove(); }
+    document.getElementById('promo-close').onclick = closeIt;
+    ov.addEventListener('click', function (e) { if (e.target.id === 'promo-splash') closeIt(); });
+  }
+
+  // Carte promo persistante dans l'app (visuel cliquable → rouvre le plein écran)
+  function renderPromoCard(promo) {
+    var host = document.getElementById('promo-card');
+    if (!host) return;
+    if (!promo || (!promo.image_url && !promo.titre)) { host.style.display = 'none'; host.innerHTML = ''; return; }
+    var esc = _promoEsc;
+    var visuel = promo.image_url
+      ? '<img src="' + esc(promo.image_url) + '" alt="Promo" style="width:100%;max-height:180px;object-fit:cover;display:block">'
+      : '<div style="padding:22px 16px;background:linear-gradient(135deg,#ef8f1c,#c0392b);color:#fff;font-weight:800;font-size:18px;text-align:center">' + esc(promo.titre || 'Promo') + '</div>';
+    host.innerHTML =
+      '<div style="cursor:pointer;border-radius:16px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.12);border:1px solid rgba(0,0,0,.06)">'
+      + visuel
+      + '<div style="padding:10px 14px;background:#fff;display:flex;align-items:center;justify-content:space-between;gap:10px">'
+      +   '<span style="font-weight:700;color:#111">' + esc(promo.titre || 'Promo du moment') + '</span>'
+      +   '<span style="color:#2f74d0;font-weight:700;white-space:nowrap">Voir ›</span>'
+      + '</div></div>';
+    host.style.display = 'block';
+    host.firstChild.onclick = function () { openPromoOverlay(promo); };
+  }
+
   async function showPromoDuJour(boutique) {
     if (!boutique) return;
     try {
-      var today = new Date().toISOString().slice(0, 10);
-      if (localStorage.getItem('fox_promo_day') === today) return;   // déjà vue aujourd'hui
       var list = await foxRpc('rpc_promos_active', { p_boutique: boutique });
-      if (!Array.isArray(list) || !list.length) return;
+      if (!Array.isArray(list) || !list.length) { renderPromoCard(null); return; }
       var promo = null;
       for (var i = 0; i < list.length; i++) { if (list[i] && list[i].image_url) { promo = list[i]; break; } }
       if (!promo) promo = list[0];
-      var ov = document.createElement('div');
-      ov.id = 'promo-splash';
-      ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(10,12,20,.93);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px';
-      var inner;
-      if (promo.image_url) {
-        inner = '<img src="' + promo.image_url + '" alt="Promo" style="max-width:100%;max-height:78vh;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.5)">';
-      } else {
-        inner = '<div style="background:#fff;color:#111;border-radius:16px;padding:24px;max-width:90%;text-align:center"><div style="font-size:22px;font-weight:800;margin-bottom:8px">' + (promo.titre || '') + '</div><div>' + (promo.texte || '') + '</div></div>';
+      _promoCurrent = promo;
+      // Carte persistante : toujours visible
+      renderPromoCard(promo);
+      // Splash plein écran : 1×/jour
+      var today = new Date().toISOString().slice(0, 10);
+      if (localStorage.getItem('fox_promo_day') !== today) {
+        openPromoOverlay(promo);
+        try { localStorage.setItem('fox_promo_day', today); } catch (e) {}
       }
-      ov.innerHTML = inner + '<button id="promo-close" style="margin-top:18px;padding:13px 28px;border:none;border-radius:12px;font-size:16px;font-weight:700;background:#fff;color:#111;cursor:pointer">Voir ma carte</button>';
-      document.body.appendChild(ov);
-      try { localStorage.setItem('fox_promo_day', today); } catch (e) {}
-      function closeIt() { var el = document.getElementById('promo-splash'); if (el) el.remove(); }
-      document.getElementById('promo-close').onclick = closeIt;
-      ov.addEventListener('click', function (e) { if (e.target.id === 'promo-splash') closeIt(); });
     } catch (e) {}
   }
 
