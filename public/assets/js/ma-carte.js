@@ -1393,6 +1393,7 @@
 
         // Mise à jour section Aide
         updateAideStatus(OneSignal);
+        syncNotifHint(OneSignal);
 
         // ⚠️ v2 : on N'AFFICHE PAS le bandeau immédiatement.
         // L'affichage est conditionné à l'engagement client.
@@ -1476,6 +1477,7 @@
     // En cas de changement (granted ou denied) : cacher bandeau
     hideBanner();
     updateAideStatus(window.OneSignal);
+    syncNotifHint(window.OneSignal);
   }
 
   function handlePermissionChange(event) {
@@ -1483,6 +1485,7 @@
     readAndPostState(window.OneSignal);
     hideBanner();
     updateAideStatus(window.OneSignal);
+    syncNotifHint(window.OneSignal);
   }
 
   // ── ⚠️ v2 — Conditions strictes affichage bandeau ───────────────
@@ -1669,6 +1672,37 @@
     }
   }
 
+  // ── Synchronise le petit hint du bouton carte avec l'état réel ──
+  function syncNotifHint(OneSignal) {
+    var hint = $('notif-hint');
+    var btn  = $('notif-btn');
+    if (!hint) return;
+    // PWA non installée
+    var standalone = (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true);
+    if (!standalone) {
+      hint.textContent = 'Installez d’abord l’app sur votre écran d’accueil (bouton Partager → « Sur l’écran d’accueil »).';
+      return;
+    }
+    if (!OneSignal || !_isOSReady) return; // laisse le texte courant
+    var permissionStatus = 'default';
+    try {
+      var perm = OneSignal.Notifications.permission;
+      if (typeof perm === 'string') permissionStatus = perm;
+      else if (perm === true) permissionStatus = 'granted';
+      else if (typeof Notification !== 'undefined') permissionStatus = Notification.permission;
+    } catch (_) {}
+    var optedIn = false;
+    try { optedIn = OneSignal.User.PushSubscription.optedIn === true; } catch (_) {}
+    if (permissionStatus === 'granted' && optedIn) {
+      hint.textContent = '✅ Notifications activées';
+      if (btn) btn.textContent = '🔔 Notifications activées';
+    } else if (permissionStatus === 'denied') {
+      hint.textContent = 'Notifications refusées. Réactivez-les dans les réglages de votre téléphone (paramètres du site).';
+    } else {
+      hint.textContent = '';
+    }
+  }
+
   // ── Demande permission (déclenchée par bouton client) ───────────
   function requestPermission() {
     if (!_isOSReady || !window.OneSignal) {
@@ -1692,6 +1726,7 @@
       readAndPostState(OneSignal);
       hideBanner();
       updateAideStatus(OneSignal);
+      syncNotifHint(OneSignal);
     }
     try {
       OneSignal.Notifications.requestPermission().then(forceSub).catch(function (err) {
