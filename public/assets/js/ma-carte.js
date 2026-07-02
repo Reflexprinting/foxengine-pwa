@@ -732,7 +732,8 @@
 
   // ── Configuration ───────────────────────────────────────────────
   var APP_VERSION       = 'phase3-polish-17';
-  var REGISTER_ENDPOINT = 'https://www.my-foxengine.com/_functions/registerPushDevice';
+  var REGISTER_ENDPOINT = 'https://cxbyblnzlivnadyhdwtz.supabase.co/functions/v1/push-register';
+  var REGISTER_ANON = 'sb_publishable_XjTXt9N9A-zBhu6lZfrxXw_Hxwfi3wp';
   var WELCOME_DELAY_MS  = 1500;     // délai après welcome fermé
   var SNOOZE_DAYS       = 7;
   var MAX_DISMISS_AUTO  = 3;
@@ -844,7 +845,7 @@
     try {
       fetch(REGISTER_ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'apikey': REGISTER_ANON, 'Authorization': 'Bearer ' + REGISTER_ANON },
         body: JSON.stringify(payload),
         credentials: 'omit',
         cache: 'no-store',
@@ -1129,7 +1130,8 @@
 
   // ── Configuration ───────────────────────────────────────────────
   var APP_VERSION       = 'phase3-polish-18-v2.1';
-  var REGISTER_ENDPOINT = 'https://www.my-foxengine.com/_functions/registerPushDevice';
+  var REGISTER_ENDPOINT = 'https://cxbyblnzlivnadyhdwtz.supabase.co/functions/v1/push-register';
+  var REGISTER_ANON = 'sb_publishable_XjTXt9N9A-zBhu6lZfrxXw_Hxwfi3wp';
   var SNOOZE_DAYS       = 3;          // ⚠️ v2 : 3 jours (vs 7j v1)
   var MAX_DISMISS_AUTO  = 3;
   var SDK_TIMEOUT_MS    = 8000;
@@ -1313,7 +1315,7 @@
     try {
       fetch(REGISTER_ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'apikey': REGISTER_ANON, 'Authorization': 'Bearer ' + REGISTER_ANON },
         body: JSON.stringify(payload),
         credentials: 'omit',
         cache: 'no-store',
