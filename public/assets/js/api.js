@@ -112,6 +112,8 @@
       // anniversaire
       hasBirthdate: (c.has_birthdate === true),
       isBirthdayToday: (c.is_birthday_today === true),
+      anniversaireMontant: Number((params.anniversaire_montant != null ? params.anniversaire_montant : 0)) || 0,
+      anniversaireActif: (params.anniversaire_actif === true),
 
       // fidélité
       cumul: cumul,

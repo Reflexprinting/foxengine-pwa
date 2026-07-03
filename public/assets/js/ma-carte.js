@@ -687,13 +687,49 @@
     } catch (_) { return ''; }
   }
 
+  // Ouvre l'offre anniversaire : le bon (code-barres) s'il existe, sinon un aperçu décoré
+  function openBirthdayOffer(data) {
+    var bons = Array.isArray(window._currentBonsRef) ? window._currentBonsRef : [];
+    var anniv = null;
+    for (var i = 0; i < bons.length; i++) { if (bons[i] && String(bons[i].source || '').toUpperCase() === 'ANNIVERSAIRE') { anniv = bons[i]; break; } }
+    if (anniv && typeof openBonModal === 'function') { openBonModal(anniv); return; }
+    // Aperçu (pas encore de bon généré) — montant depuis le réglage Manager
+    if (document.getElementById('bday-offer-splash')) return;
+    var montant = Number((data && data.anniversaireMontant) || 0);
+    var mtxt = montant > 0 ? (Number.isInteger(montant) ? montant : montant.toFixed(2)) + ' €' : 'un cadeau';
+    var ov = document.createElement('div');
+    ov.id = 'bday-offer-splash';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(10,12,20,.92);display:flex;align-items:center;justify-content:center;padding:18px';
+    ov.innerHTML =
+      '<div style="max-width:360px;width:100%;border-radius:22px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)">'
+      + '<div style="background:linear-gradient(135deg,#c0392b,#ef8f1c 55%,#6a5acd);color:#fff;text-align:center;padding:28px 20px">'
+      +   '<div style="font-size:58px;line-height:1">🎂</div>'
+      +   '<div style="font-size:24px;margin-top:2px">🎉 🎊 🎈</div>'
+      +   '<div style="font-weight:900;font-size:20px;margin-top:10px">Votre bon cadeau anniversaire</div>'
+      +   '<div style="font-size:44px;font-weight:900;margin-top:8px">' + mtxt + '</div>'
+      +   '<div style="font-size:13px;opacity:.95;margin-top:8px">À présenter en caisse le jour de votre anniversaire. Votre bon apparaîtra ici automatiquement 🎁</div>'
+      + '</div>'
+      + '<button id="bday-offer-close" style="width:100%;padding:15px;border:none;font-size:16px;font-weight:800;background:#fff;color:#111;cursor:pointer">Fermer</button>'
+      + '</div>';
+    document.body.appendChild(ov);
+    function close() { var el = document.getElementById('bday-offer-splash'); if (el) el.remove(); }
+    document.getElementById('bday-offer-close').onclick = close;
+    ov.addEventListener('click', function (e) { if (e.target.id === 'bday-offer-splash') close(); });
+  }
+
   // Anniversaire : bannière le jour J + collecte de la date si absente
   function renderBirthday(data) {
     if (!data) return;
+    try { window._currentBonsRef = Array.isArray(data.bons) ? data.bons : []; } catch (_) {}
     var banner = document.getElementById('bday-banner-sec');
     var collect = document.getElementById('bday-collect-sec');
     if (banner) {
-      if (data.isBirthdayToday) { var n = document.getElementById('bday-name'); if (n) n.textContent = data.prenom || ''; banner.style.display = 'block'; }
+      if (data.isBirthdayToday) {
+        var n = document.getElementById('bday-name'); if (n) n.textContent = data.prenom || '';
+        banner.style.display = 'block';
+        var ob = document.getElementById('bday-offer-btn');
+        if (ob && !ob._wired) { ob._wired = true; ob.addEventListener('click', function () { openBirthdayOffer(data); }); }
+      }
       else banner.style.display = 'none';
     }
     if (collect) {
