@@ -656,6 +656,24 @@
     host.style.display = 'block';
   }
 
+  var SITE_URLS = {
+    'Rochefort':    'https://www.boucherie-rochefort.fr',
+    'Royan':        'https://www.boucherie-royan.fr',
+    'Saint-Pierre': 'https://www.boucherie-oleron.fr',
+    'Paron':        'https://www.boucherie-paron.fr',
+    'Joigny':       'https://www.boucherie-joigny.fr',
+    'Charny':       'https://www.boucherie-charny.fr'
+  };
+  function renderSiteButton(boutique) {
+    var sec = document.getElementById('site-section');
+    var lnk = document.getElementById('site-link');
+    if (!sec || !lnk) return;
+    var url = SITE_URLS[String(boutique || '').trim()];
+    if (!url) { sec.style.display = 'none'; return; }
+    lnk.setAttribute('href', url);
+    sec.style.display = 'block';
+  }
+
   async function showPromoDuJour(boutique) {
     if (!boutique) return;
     try {
@@ -710,6 +728,7 @@
       maybeShowWelcome();
       // Promo du jour : splash plein écran (image), 1×/jour
       showPromoDuJour(data.boutique && (data.boutique.boutiqueId || data.boutique));
+      renderSiteButton(data.boutique && (data.boutique.boutiqueId || data.boutique));
 
       // ════════════════════════════════════════════════════════════
       // POLISH-17 — Hook install flow (après render carte + welcome)
