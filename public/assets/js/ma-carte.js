@@ -687,6 +687,49 @@
     } catch (_) { return ''; }
   }
 
+  // 🎉 Feu d'artifice de confettis (jour d'anniversaire), 1×/jour à l'ouverture
+  function birthdayConfetti() {
+    try {
+      var today = new Date().toISOString().slice(0, 10);
+      if (localStorage.getItem('fox_bday_confetti') === today) return;
+      localStorage.setItem('fox_bday_confetti', today);
+    } catch (_) {}
+    var cv = document.createElement('canvas');
+    cv.style.cssText = 'position:fixed;inset:0;z-index:10000;pointer-events:none';
+    document.body.appendChild(cv);
+    var ctx = cv.getContext('2d');
+    function size() { cv.width = window.innerWidth; cv.height = window.innerHeight; }
+    size();
+    var colors = ['#c0392b', '#ef8f1c', '#6a5acd', '#2f74d0', '#27ae60', '#f1c40f', '#e84393', '#ffffff'];
+    var parts = [];
+    function burst(x, y) {
+      for (var i = 0; i < 70; i++) {
+        var a = Math.random() * Math.PI * 2, sp = 4 + Math.random() * 8;
+        parts.push({ x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 6,
+          g: 0.16 + Math.random() * 0.12, c: colors[(Math.random() * colors.length) | 0],
+          s: 5 + Math.random() * 7, rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 0.35, life: 1 });
+      }
+    }
+    var W = cv.width, H = cv.height;
+    burst(W * 0.5, H * 0.38);
+    setTimeout(function () { burst(W * 0.22, H * 0.5); }, 220);
+    setTimeout(function () { burst(W * 0.78, H * 0.5); }, 420);
+    setTimeout(function () { burst(W * 0.5, H * 0.3); }, 650);
+    var t0 = Date.now();
+    function frame() {
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      for (var i = 0; i < parts.length; i++) {
+        var p = parts[i];
+        p.vy += p.g; p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.life -= 0.006;
+        if (p.life <= 0) continue;
+        ctx.save(); ctx.globalAlpha = Math.max(0, p.life); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+        ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * 0.62); ctx.restore();
+      }
+      if (Date.now() - t0 < 4200) { requestAnimationFrame(frame); } else { cv.remove(); }
+    }
+    requestAnimationFrame(frame);
+  }
+
   // Ouvre l'offre anniversaire : le bon (code-barres) s'il existe, sinon un aperçu décoré
   function openBirthdayOffer(data) {
     var bons = Array.isArray(window._currentBonsRef) ? window._currentBonsRef : [];
@@ -729,6 +772,7 @@
         banner.style.display = 'block';
         var ob = document.getElementById('bday-offer-btn');
         if (ob && !ob._wired) { ob._wired = true; ob.addEventListener('click', function () { openBirthdayOffer(data); }); }
+        setTimeout(function () { try { birthdayConfetti(); } catch (_) {} }, 500);
       }
       else banner.style.display = 'none';
     }
