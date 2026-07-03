@@ -674,6 +674,54 @@
     sec.style.display = 'block';
   }
 
+  function _getSig() {
+    try {
+      var p = new URLSearchParams(window.location.search);
+      var s = (p.get('sig') || p.get('s') || '').trim();
+      if (!s && window.location.hash) {
+        var hp = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+        s = (hp.get('sig') || hp.get('s') || '').trim();
+      }
+      if (!s) s = (localStorage.getItem('fe_card_sig') || '').trim();
+      return s;
+    } catch (_) { return ''; }
+  }
+
+  // Anniversaire : bannière le jour J + collecte de la date si absente
+  function renderBirthday(data) {
+    if (!data) return;
+    var banner = document.getElementById('bday-banner-sec');
+    var collect = document.getElementById('bday-collect-sec');
+    if (banner) {
+      if (data.isBirthdayToday) { var n = document.getElementById('bday-name'); if (n) n.textContent = data.prenom || ''; banner.style.display = 'block'; }
+      else banner.style.display = 'none';
+    }
+    if (collect) {
+      if (data.hasBirthdate) { collect.style.display = 'none'; }
+      else {
+        collect.style.display = 'block';
+        var btn = document.getElementById('bday-save');
+        var inp = document.getElementById('bday-input');
+        var msg = document.getElementById('bday-msg');
+        if (btn && inp && !btn._wired) {
+          btn._wired = true;
+          btn.addEventListener('click', async function () {
+            var val = (inp.value || '').trim();
+            if (!val) { if (msg) msg.textContent = 'Choisissez une date.'; return; }
+            var code = (typeof getCodeFromUrl === 'function') ? getCodeFromUrl() : ((data && data.code_client) || '');
+            var sig = _getSig();
+            btn.disabled = true; if (msg) msg.textContent = 'Enregistrement…';
+            try {
+              var r = await foxRpc('rpc_client_set_birthdate', { p_code: code, p_sig: sig, p_birthdate: val });
+              if (r && r.ok === true) { if (msg) msg.textContent = '✅ Merci ! Votre cadeau vous attendra le jour J.'; setTimeout(function(){ if (collect) collect.style.display='none'; }, 1500); }
+              else { if (msg) msg.textContent = 'Impossible d’enregistrer (' + ((r && r.error) || 'erreur') + ').'; btn.disabled = false; }
+            } catch (e) { if (msg) msg.textContent = 'Réseau indisponible, réessayez.'; btn.disabled = false; }
+          });
+        }
+      }
+    }
+  }
+
   async function showPromoDuJour(boutique) {
     if (!boutique) return;
     try {
@@ -729,6 +777,7 @@
       // Promo du jour : splash plein écran (image), 1×/jour
       showPromoDuJour(data.boutique && (data.boutique.boutiqueId || data.boutique));
       renderSiteButton(data.boutique && (data.boutique.boutiqueId || data.boutique));
+      renderBirthday(data);
 
       // ════════════════════════════════════════════════════════════
       // POLISH-17 — Hook install flow (après render carte + welcome)

@@ -109,6 +109,10 @@
       code_client: c.code_client || '',
       boutique: boutique,
 
+      // anniversaire
+      hasBirthdate: (c.has_birthdate === true),
+      isBirthdayToday: (c.is_birthday_today === true),
+
       // fidélité
       cumul: cumul,
       achatsCycle: cumul,
