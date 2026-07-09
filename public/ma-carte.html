@@ -301,6 +301,20 @@
     </div>
   </div>
 
+  <!-- MODAL NOTIFICATIONS — proposée au démarrage si non activées -->
+  <div id="push-gate-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="push-gate-title">
+    <div class="modal">
+      <div style="text-align:center;font-size:46px;line-height:1;margin-bottom:6px">🔔</div>
+      <h3 id="push-gate-title" style="text-align:center;margin:0 0 8px">Activez vos notifications</h3>
+      <p style="text-align:center;margin:0 0 4px">Recevez vos <strong>bons d'achat</strong>, promotions et dernières minutes directement sur votre téléphone.</p>
+      <p style="text-align:center;margin:0;color:var(--muted);font-size:13.5px">C'est gratuit et vous pouvez les désactiver à tout moment.</p>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:18px">
+        <button id="push-gate-activate" class="btn-primary" type="button" style="width:100%">Activer les notifications</button>
+        <button id="push-gate-later" class="btn-secondary" type="button" style="width:100%">Plus tard</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL BON D'ACHAT — barcode CODE128 pour scan caisse -->
   <div id="bon-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="bon-modal-title">
     <div class="modal modal-bon">

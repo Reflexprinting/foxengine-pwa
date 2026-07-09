@@ -426,13 +426,23 @@
       if (e.target.id === 'passages-modal') $('passages-modal').classList.remove('open');
     });
 
-    // Activer / réactiver les notifications (force la resouscription même si iOS dit "accordé")
+    // Activer / DÉSACTIVER les notifications (bouton bascule)
     if ($('notif-btn')) $('notif-btn').addEventListener('click', () => {
       const standalone = (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true);
       if (!standalone) {
         if ($('notif-hint')) $('notif-hint').textContent = 'Installez d’abord l’app sur votre écran d’accueil (bouton Partager → « Sur l’écran d’accueil »).';
         return;
       }
+      // Déjà activées → clic = désactiver
+      if (window.FoxPush && typeof window.FoxPush.isPushActive === 'function' && window.FoxPush.isPushActive()) {
+        if (confirm('Désactiver les notifications ? Vous ne recevrez plus vos bons d’achat et offres par notification.')) {
+          window.FoxPush.disablePush();
+          if ($('notif-btn'))  $('notif-btn').textContent = '🔔 Activer mes notifications';
+          if ($('notif-hint')) $('notif-hint').textContent = 'Notifications désactivées. Touchez pour les réactiver.';
+        }
+        return;
+      }
+      // Sinon → activer
       if (window.FoxPush && typeof window.FoxPush.requestPermission === 'function') {
         window.FoxPush.requestPermission();
         if ($('notif-hint')) $('notif-hint').textContent = 'Activation en cours… si rien ne se passe, fermez et rouvrez l’app.';
@@ -463,6 +473,22 @@
       });
     }
 
+    // Notifications (modale de démarrage)
+    const pushGate = $('push-gate-modal');
+    if (pushGate) {
+      const closeGate = () => { pushGate.classList.remove('open'); _pushGateDismissed = true; };
+      if ($('push-gate-later')) $('push-gate-later').addEventListener('click', closeGate);
+      if ($('push-gate-activate')) $('push-gate-activate').addEventListener('click', () => {
+        pushGate.classList.remove('open');
+        _pushGateDismissed = true;
+        if (window.FoxPush && typeof window.FoxPush.requestPermission === 'function') {
+          window.FoxPush.requestPermission();
+        }
+        if ($('notif-hint')) $('notif-hint').textContent = 'Activation en cours… si rien ne se passe, fermez et rouvrez l’app.';
+      });
+      pushGate.addEventListener('click', (e) => { if (e.target.id === 'push-gate-modal') closeGate(); });
+    }
+
     // Esc ferme toute modal ouverte
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
@@ -471,9 +497,29 @@
           welcomeModal.classList.remove('open');
           markWelcomeSeen();
         }
+        const pg = $('push-gate-modal');
+        if (pg && pg.classList.contains('open')) { pg.classList.remove('open'); _pushGateDismissed = true; }
         closeBonModal();
       }
     });
+  }
+
+  // ── MODALE NOTIFICATIONS (démarrage) ─────────────────
+  // S'affiche si : app installée (standalone) ET permission encore "default".
+  // Reste discrète si déjà accordée/refusée, ou si non installée (l'install flow gère).
+  let _pushGateDismissed = false;
+  function maybeShowPushGate() {
+    try {
+      const standalone = (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true);
+      if (!standalone || _pushGateDismissed) return;
+      let perm = 'default';
+      try { if (typeof Notification !== 'undefined') perm = Notification.permission; } catch (_) {}
+      if (perm !== 'default') return;
+      const wm = $('welcome-modal');
+      if (wm && wm.classList.contains('open')) return; // ne pas empiler sur l'accueil
+      const m = $('push-gate-modal');
+      if (m) m.classList.add('open');
+    } catch (_) {}
   }
 
   // ── MODAL ACCUEIL PREMIÈRE VISITE ─────────────────
@@ -880,6 +926,9 @@
           console.warn('[ma-carte] FoxPush.init failed', e);
         }
       }
+
+      // Modale notifications : proposée au démarrage (app installée + non encore activées)
+      setTimeout(maybeShowPushGate, 1400);
     } catch (e) {
       console.error('[ma-carte] erreur', e);
       if (e.code === 'CLIENT_NOT_FOUND' || e.code === 'LIEN_INVALIDE') {
@@ -1937,6 +1986,30 @@
     }
   }
 
+  // ── État réel de l'abonnement push (permission accordée + opt-in) ─
+  function isPushActive() {
+    var OneSignal = window.OneSignal;
+    if (!_isOSReady || !OneSignal) return false;
+    var granted = false, optedIn = false;
+    try {
+      var p = OneSignal.Notifications.permission;
+      granted = (p === true || p === 'granted' ||
+        (typeof Notification !== 'undefined' && Notification.permission === 'granted'));
+    } catch (_) {}
+    try { optedIn = OneSignal.User.PushSubscription.optedIn === true; } catch (_) {}
+    return granted && optedIn;
+  }
+
+  // ── Désactiver les notifications (opt-out depuis l'app) ──────────
+  function disablePush() {
+    var OneSignal = window.OneSignal;
+    if (!_isOSReady || !OneSignal) return;
+    try { OneSignal.User.PushSubscription.optOut(); } catch (e) {}
+    try { readAndPostState(OneSignal); } catch (e) {}
+    try { updateAideStatus(OneSignal); } catch (e) {}
+    try { syncNotifHint(OneSignal); } catch (e) {}
+  }
+
   // ── Wiring boutons ──────────────────────────────────────────────
   function wireButtons() {
     // Bandeau : Activer
@@ -2014,8 +2087,10 @@
       }
     },
 
-    // Méthode publique pour debug / tests
-    requestPermission: requestPermission
+    // Méthodes publiques
+    requestPermission: requestPermission,
+    disablePush: disablePush,
+    isPushActive: isPushActive
   };
 
 })();
