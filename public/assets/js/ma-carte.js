@@ -1893,8 +1893,8 @@
     var optedIn = false;
     try { optedIn = OneSignal.User.PushSubscription.optedIn === true; } catch (_) {}
     if (permissionStatus === 'granted' && optedIn) {
-      hint.textContent = '✅ Notifications activées';
-      if (btn) btn.textContent = '🔔 Notifications activées';
+      hint.textContent = 'Touchez pour gérer vos notifications.';
+      if (btn) btn.textContent = '✅ Notifications activées';
     } else if (permissionStatus === 'denied') {
       hint.textContent = 'Notifications refusées. Réactivez-les dans les réglages de votre téléphone (paramètres du site).';
     } else {
