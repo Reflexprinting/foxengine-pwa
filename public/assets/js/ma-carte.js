@@ -271,6 +271,11 @@
   // ── BONS D'ACHAT (cliquables → modal) ──────────────
   let _currentBons = [];
 
+  // Valeur affichée d'un bon : remise en pourcentage, sinon montant en euros
+  function bonVal(b) {
+    return (b && b.type_valeur === 'pourcentage') ? ('-' + Number(b.montant) + '%') : fmtEuro(b && b.montant);
+  }
+
   function renderBons(data) {
     _currentBons = Array.isArray(data.bons) ? data.bons : [];
     const box = $('bons-list');
@@ -280,7 +285,7 @@
     }
     box.innerHTML = _currentBons.map((b, idx) =>
       '<div class="bon" data-idx="' + idx + '" role="button" tabindex="0">' +
-        '<div class="bon-amount">' + fmtEuro(b.montant) + '</div>' +
+        '<div class="bon-amount">' + bonVal(b) + '</div>' +
         '<div class="bon-meta">' +
           '<span>' + escapeHtml(b.code || '—') + '</span>' +
           '<span>' + fmtDate(b.date_creation) + ' · ' + escapeHtml(b.boutique_emission || '—') + '</span>' +
@@ -307,7 +312,7 @@
 
   // ── MODAL BON D'ACHAT (avec code-barres CODE128) ──
   function openBonModal(bon) {
-    $('bon-modal-amount').textContent = fmtEuro(bon.montant);
+    $('bon-modal-amount').textContent = bonVal(bon);
     $('bon-modal-code').textContent   = bon.code || '—';
     $('bon-modal-date').textContent   = fmtDate(bon.date_creation);
     $('bon-modal-shop').textContent   = bon.boutique_emission || '—';
