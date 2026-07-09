@@ -660,6 +660,7 @@
     if (promo.titre || promo.texte) {
       inner += '<div style="background:#fff;color:#111;border-radius:16px;padding:18px 22px;max-width:92%;text-align:center;margin-top:' + (promo.image_url ? '14px' : '0') + '">'
         + (promo.titre ? '<div style="font-size:21px;font-weight:800;margin-bottom:6px">' + esc(promo.titre) + '</div>' : '')
+        + (_promoDateLabel(promo) ? '<div style="font-size:13.5px;color:#667085;margin-bottom:8px">📅 ' + esc(_promoDateLabel(promo)) + '</div>' : '')
         + (promo.texte ? '<div style="font-size:15px;line-height:1.45;white-space:pre-wrap">' + esc(promo.texte) + '</div>' : '')
         + '</div>';
     }
@@ -674,6 +675,17 @@
     ov.addEventListener('click', function (e) { if (e.target.id === 'promo-splash') closeIt(); });
   }
 
+  // Libellé de période d'une promo (date_debut / date_fin)
+  function _promoDateLabel(p) {
+    function f(d) { try { var x = new Date(d); if (isNaN(x.getTime())) return ''; return x.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }); } catch (_) { return ''; } }
+    var fa = p && p.date_debut ? f(p.date_debut) : '';
+    var fb = p && p.date_fin   ? f(p.date_fin)   : '';
+    if (fa && fb) return (fa === fb) ? ('Le ' + fa) : ('Du ' + fa + ' au ' + fb);
+    if (fb) return "Jusqu'au " + fb;
+    if (fa) return 'À partir du ' + fa;
+    return '';
+  }
+
   // Une carte promo cliquable (retourne l'élément DOM)
   function buildPromoCardEl(promo) {
     var esc = _promoEsc;
@@ -682,9 +694,13 @@
       : '<div style="padding:22px 16px;background:linear-gradient(135deg,#ef8f1c,#c0392b);color:#fff;font-weight:800;font-size:18px;text-align:center">' + esc(promo.titre || 'Promo') + '</div>';
     var el = document.createElement('div');
     el.style.cssText = 'cursor:pointer;border-radius:16px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.12);border:1px solid rgba(0,0,0,.06);margin-bottom:12px';
+    var dateLbl = _promoDateLabel(promo);
     el.innerHTML = visuel
       + '<div style="padding:10px 14px;background:#fff;display:flex;align-items:center;justify-content:space-between;gap:10px">'
-      +   '<span style="font-weight:700;color:#111">' + esc(promo.titre || 'Promo du moment') + '</span>'
+      +   '<div style="min-width:0">'
+      +     '<div style="font-weight:700;color:#111">' + esc(promo.titre || 'Promo du moment') + '</div>'
+      +     (dateLbl ? '<div style="font-size:12.5px;color:#667085;margin-top:2px">📅 ' + esc(dateLbl) + '</div>' : '')
+      +   '</div>'
       +   '<span style="color:#2f74d0;font-weight:700;white-space:nowrap">Voir ›</span>'
       + '</div>';
     el.onclick = function () { openPromoOverlay(promo); };

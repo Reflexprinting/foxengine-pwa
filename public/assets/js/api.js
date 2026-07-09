@@ -128,8 +128,17 @@
       bons: bons,
       passages: passages,
 
-      // infos boutique (horaires, promos…) — l'app lit data.infos
-      infos: r.infos_boutique || null,
+      // infos boutique (horaires, promos…) — l'app lit data.infos en camelCase.
+      // La RPC renvoie du snake_case → on convertit ici (sinon horaires + offres ne s'affichent pas).
+      infos: r.infos_boutique ? {
+        horairesLunVen: r.infos_boutique.horaires_lun_ven  || '',
+        horairesSam:    r.infos_boutique.horaires_samedi   || '',
+        horairesDim:    r.infos_boutique.horaires_dimanche || '',
+        horairesFeries: r.infos_boutique.horaires_feries   || '',
+        promoEnCours:   r.infos_boutique.promo             || '',
+        offreSpeciale:  r.infos_boutique.offre_speciale    || '',
+        infoMessage:    r.infos_boutique.message_info      || ''
+      } : null,
 
       // inbox push (si l'app l'utilise un jour)
       inbox: Array.isArray(r.inbox) ? r.inbox : [],
