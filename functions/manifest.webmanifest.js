@@ -2,14 +2,17 @@
 //
 // Route : GET /manifest.webmanifest?code=BT-503721
 //
-// Ce endpoint génère un manifest JSON personnalisé en récupérant les données
-// boutique (nom, couleurs, logoUrl) via l'endpoint Wix existant
-// getPublicClientData. Aucune modification côté Wix nécessaire.
+// Ce endpoint génère un manifest JSON personnalisé (nom, couleurs, logo) à partir
+// du branding de la boutique du client, récupéré via la RPC publique Supabase
+// rpc_pwa_branding (données non sensibles, pas de signature requise).
 //
-// En cas d'erreur (code absent, Wix injoignable, etc.) on retourne un manifest
+// En cas d'erreur (code absent, Supabase injoignable, etc.) on retourne un manifest
 // fallback FoxEngine générique pour ne jamais casser la PWA.
 
-const WIX_API_BASE = 'https://www.my-foxengine.com/_functions';
+// Migration Supabase : le branding boutique (logo, couleurs, enseigne) vient
+// désormais de la RPC publique rpc_pwa_branding (non sensible, sans signature).
+const SUPA_URL = 'https://cxbyblnzlivnadyhdwtz.supabase.co';
+const SUPA_KEY = 'sb_publishable_XjTXt9N9A-zBhu6lZfrxXw_Hxwfi3wp';
 const CACHE_TTL_SECONDS = 300; // 5 minutes — équilibre fraîcheur/perf
 
 // ── HELPERS ───────────────────────────────────────────
@@ -23,12 +26,7 @@ function detectMimeFromUrl(url) {
 }
 
 // Transforme une URL Wix CMS rectangulaire en URL carrée de la taille demandée.
-// Indispensable côté Android Chrome qui refuse les icônes d'app non-carrées
-// et tombe en fallback sur l'icône FoxEngine générique.
-//
-// Pattern Wix CMS : .../v1/fill/w_NNN,h_NNN,al_c,q_85,...
-// On remplace w_X,h_Y par w_<size>,h_<size> en gardant les autres paramètres.
-// Si l'URL n'est pas une URL Wix CMS reconnaissable, on retourne l'original.
+// (Conservé pour compat ; sans effet sur les URLs Supabase Storage.)
 function makeWixSquareUrl(originalUrl, size) {
   if (!originalUrl) return originalUrl;
   try {
@@ -52,7 +50,7 @@ function manifestHeaders() {
   };
 }
 
-// Manifest fallback FoxEngine (servi si pas de code ou erreur Wix)
+// Manifest fallback FoxEngine (servi si pas de code ou erreur Supabase)
 function buildFallbackManifest(code) {
   const startUrl = code
     ? '/ma-carte.html?code=' + encodeURIComponent(code) +
@@ -81,7 +79,7 @@ function buildFallbackManifest(code) {
   };
 }
 
-// Manifest enrichi avec les données boutique CMS
+// Manifest enrichi avec le branding boutique (logo, couleurs, enseigne)
 function buildBoutiqueManifest(code, boutique) {
   const m = buildFallbackManifest(code);
   if (!boutique || typeof boutique !== 'object') return m;
@@ -93,7 +91,7 @@ function buildBoutiqueManifest(code, boutique) {
     m.short_name = enseigne.length > 12 ? enseigne.substring(0, 12) : enseigne;
   }
 
-  // Couleurs CMS
+  // Couleurs
   if (boutique.couleurPrimaire) {
     m.theme_color = boutique.couleurPrimaire;
   }
@@ -103,9 +101,7 @@ function buildBoutiqueManifest(code, boutique) {
     m.background_color = boutique.couleurPrimaire;
   }
 
-  // Logo boutique → icônes carrées Wix (192/512) + fallback FoxEngine après
-  // Android Chrome exige des icônes carrées 192x192 ou 512x512 pour l'app
-  // installée. On génère 2 URLs carrées via le redimensionnement Wix CMS.
+  // Logo boutique → icônes de l'app installée (192/512) + fallback FoxEngine après.
   const logoUrl = (typeof boutique.logoUrl === 'string') ? boutique.logoUrl.trim() : '';
   if (logoUrl) {
     const mime = detectMimeFromUrl(logoUrl);
@@ -138,21 +134,29 @@ export async function onRequestGet(context) {
   }
 
   try {
-    const wixUrl = WIX_API_BASE + '/getPublicClientData?code=' + encodeURIComponent(code);
-    const wixRes = await fetch(wixUrl, {
-      cf: { cacheTtl: CACHE_TTL_SECONDS, cacheEverything: true }
+    // Branding boutique via RPC publique Supabase (logo, couleurs, enseigne).
+    const res = await fetch(SUPA_URL + '/rest/v1/rpc/rpc_pwa_branding', {
+      method: 'POST',
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': 'Bearer ' + SUPA_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ p_code: code })
     });
 
-    if (!wixRes.ok) {
-      // Code introuvable ou erreur Wix → fallback avec start_url + code
+    if (!res.ok) {
+      // Erreur / code introuvable → fallback avec start_url + code
       return new Response(
         JSON.stringify(buildFallbackManifest(code)),
         { headers: manifestHeaders() }
       );
     }
 
-    const data = await wixRes.json();
-    const manifest = buildBoutiqueManifest(code, data && data.boutique);
+    // rpc_pwa_branding renvoie directement { found, boutique:{...} }
+    const data = await res.json();
+    const boutique = (data && data.found === true) ? data.boutique : null;
+    const manifest = buildBoutiqueManifest(code, boutique);
 
     return new Response(
       JSON.stringify(manifest),
