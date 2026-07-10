@@ -106,7 +106,10 @@
       // identité client
       nom: c.nom || '',
       prenom: c.prenom || '',
-      code_client: c.code_client || '',
+      // Identifiant de carte affiché + encodé en code-barres : code_client si présent,
+      // sinon le badge (EAN) — certaines cartes générées en caisse n'ont qu'un badge.
+      code_client: c.code_client || c.badge || '',
+      badge: c.badge || '',
       boutique: boutique,
 
       // anniversaire
