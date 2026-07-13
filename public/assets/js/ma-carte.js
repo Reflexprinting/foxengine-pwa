@@ -578,11 +578,15 @@
   // On le patch dynamiquement avec le logoUrl CMS reçu de l'API.
   function setAppleTouchIcon(boutique) {
     if (!boutique) return;
-    const logoUrl = (typeof boutique.logoUrl === 'string') ? boutique.logoUrl.trim() : '';
-    if (!logoUrl) return;
+    // Priorité à l'icône d'app CARRÉE (rendu net et arrondi propre sur iOS) ;
+    // à défaut, on retombe sur le logo (rectangulaire, moins joli mais fonctionnel).
+    var appIcon = (typeof boutique.appIcon === 'string') ? boutique.appIcon.trim() : '';
+    var logoUrl = (typeof boutique.logoUrl === 'string') ? boutique.logoUrl.trim() : '';
+    var href = appIcon || logoUrl;
+    if (!href) return;
     try {
       const appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
-      if (appleIcon) appleIcon.href = logoUrl;
+      if (appleIcon) appleIcon.href = href;
     } catch (e) {
       console.warn('[ma-carte] setAppleTouchIcon failed', e);
     }

@@ -2,15 +2,13 @@
 //
 // Route : GET /manifest.webmanifest?code=BT-503721
 //
-// Ce endpoint génère un manifest JSON personnalisé (nom, couleurs, logo) à partir
-// du branding de la boutique du client, récupéré via la RPC publique Supabase
-// rpc_pwa_branding (données non sensibles, pas de signature requise).
+// Ce endpoint génère un manifest JSON personnalisé en récupérant le branding
+// boutique (nom, couleurs, icône d'app) via la RPC publique Supabase
+// rpc_pwa_branding (non sensible, sans signature).
 //
-// En cas d'erreur (code absent, Supabase injoignable, etc.) on retourne un manifest
-// fallback FoxEngine générique pour ne jamais casser la PWA.
+// En cas d'erreur (code absent, Supabase injoignable, etc.) on retourne un
+// manifest fallback FoxEngine générique pour ne jamais casser la PWA.
 
-// Migration Supabase : le branding boutique (logo, couleurs, enseigne) vient
-// désormais de la RPC publique rpc_pwa_branding (non sensible, sans signature).
 const SUPA_URL = 'https://cxbyblnzlivnadyhdwtz.supabase.co';
 const SUPA_KEY = 'sb_publishable_XjTXt9N9A-zBhu6lZfrxXw_Hxwfi3wp';
 const CACHE_TTL_SECONDS = 300; // 5 minutes — équilibre fraîcheur/perf
@@ -23,22 +21,6 @@ function detectMimeFromUrl(url) {
   if (lower.endsWith('.svg'))  return 'image/svg+xml';
   if (lower.endsWith('.webp')) return 'image/webp';
   return 'image/png';
-}
-
-// Transforme une URL Wix CMS rectangulaire en URL carrée de la taille demandée.
-// (Conservé pour compat ; sans effet sur les URLs Supabase Storage.)
-function makeWixSquareUrl(originalUrl, size) {
-  if (!originalUrl) return originalUrl;
-  try {
-    if (!/static\.wixstatic\.com/.test(originalUrl)) return originalUrl;
-    if (!/\/fill\/w_\d+,h_\d+/.test(originalUrl))    return originalUrl;
-    return originalUrl.replace(
-      /\/fill\/w_\d+,h_\d+/,
-      '/fill/w_' + size + ',h_' + size
-    );
-  } catch (_) {
-    return originalUrl;
-  }
 }
 
 function manifestHeaders() {
@@ -79,7 +61,7 @@ function buildFallbackManifest(code) {
   };
 }
 
-// Manifest enrichi avec le branding boutique (logo, couleurs, enseigne)
+// Manifest enrichi avec le branding boutique (Supabase)
 function buildBoutiqueManifest(code, boutique) {
   const m = buildFallbackManifest(code);
   if (!boutique || typeof boutique !== 'object') return m;
@@ -101,21 +83,24 @@ function buildBoutiqueManifest(code, boutique) {
     m.background_color = boutique.couleurPrimaire;
   }
 
-  // Logo boutique → icônes de l'app installée (192/512) + fallback FoxEngine après.
-  const logoUrl = (typeof boutique.logoUrl === 'string') ? boutique.logoUrl.trim() : '';
-  if (logoUrl) {
-    const mime = detectMimeFromUrl(logoUrl);
-    const url192 = makeWixSquareUrl(logoUrl, 192);
-    const url512 = makeWixSquareUrl(logoUrl, 512);
+  // Icône d'app carrée par boutique (champ dédié appIcon192/512 servi par la RPC
+  // branding). C'est une VRAIE image carrée (générée à partir du logo), hébergée
+  // côté PWA — Android Chrome exige des icônes carrées, sinon il retombe sur
+  // l'icône générique. On ne dépend plus du redimensionnement Wix (disparu).
+  const icon192 = (typeof boutique.appIcon192 === 'string') ? boutique.appIcon192.trim() : '';
+  const icon512 = (typeof boutique.appIcon512 === 'string') ? boutique.appIcon512.trim() : '';
 
+  if (icon512 || icon192) {
+    const s192 = icon192 || icon512;
+    const s512 = icon512 || icon192;
     const boutiqueIcons = [
-      { src: url192, sizes: '192x192', type: mime, purpose: 'any' },
-      { src: url512, sizes: '512x512', type: mime, purpose: 'any' },
-      { src: url512, sizes: '512x512', type: mime, purpose: 'maskable' }
+      { src: s192, sizes: '192x192', type: detectMimeFromUrl(s192), purpose: 'any' },
+      { src: s512, sizes: '512x512', type: detectMimeFromUrl(s512), purpose: 'any' },
+      { src: s512, sizes: '512x512', type: detectMimeFromUrl(s512), purpose: 'maskable' }
     ];
     m.icons = boutiqueIcons.concat(m.icons);
   }
-  // Sinon : icônes FoxEngine du fallback conservées tel quel
+  // Sinon : icônes FoxEngine génériques du fallback (autres enseignes sans icône)
 
   return m;
 }
@@ -134,7 +119,7 @@ export async function onRequestGet(context) {
   }
 
   try {
-    // Branding boutique via RPC publique Supabase (logo, couleurs, enseigne).
+    // Branding boutique via RPC publique Supabase (logo, couleurs, icône, enseigne).
     const res = await fetch(SUPA_URL + '/rest/v1/rpc/rpc_pwa_branding', {
       method: 'POST',
       headers: {
@@ -146,7 +131,6 @@ export async function onRequestGet(context) {
     });
 
     if (!res.ok) {
-      // Erreur / code introuvable → fallback avec start_url + code
       return new Response(
         JSON.stringify(buildFallbackManifest(code)),
         { headers: manifestHeaders() }
@@ -163,7 +147,6 @@ export async function onRequestGet(context) {
       { headers: manifestHeaders() }
     );
   } catch (e) {
-    // Toute erreur réseau / parsing → fallback
     return new Response(
       JSON.stringify(buildFallbackManifest(code)),
       { headers: manifestHeaders() }

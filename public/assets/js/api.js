@@ -83,6 +83,7 @@
       nom: brand.enseigne || c.boutique || '',
       enseigne: brand.enseigne || '',
       logoUrl: brand.logo_url || '',
+      appIcon: brand.app_icon_512 || '',
       couleurPrimaire: brand.couleur_primaire || '#0B3D91',
       couleurSecondaire: brand.couleur_secondaire || '#F26A21',
       secteur: brand.secteur || ''
