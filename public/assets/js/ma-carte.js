@@ -383,7 +383,22 @@
   function renderInfos(data) {
     const i = data.infos || {};
     const rows = [];
-    if (i.horairesLunVen) rows.push('<div class="info-row"><strong>Lun–Ven</strong><span>' + escapeHtml(i.horairesLunVen) + '</span></div>');
+    const jours = [['Lundi',i.horairesLun],['Mardi',i.horairesMar],['Mercredi',i.horairesMer],['Jeudi',i.horairesJeu],['Vendredi',i.horairesVen]];
+    const aDetailJour = jours.some(function(j){ return j[1]; });
+    if (aDetailJour) {
+      // Affichage par jour (nouveau) — regroupe les jours consécutifs identiques pour rester compact.
+      let k = 0;
+      while (k < jours.length) {
+        const val = jours[k][1] || '';
+        let e = k;
+        while (e + 1 < jours.length && (jours[e+1][1] || '') === val) e++;
+        const lbl = (e > k) ? (jours[k][0] + '–' + jours[e][0]) : jours[k][0];
+        if (val) rows.push('<div class="info-row"><strong>' + lbl + '</strong><span>' + escapeHtml(val) + '</span></div>');
+        k = e + 1;
+      }
+    } else if (i.horairesLunVen) {
+      rows.push('<div class="info-row"><strong>Lun–Ven</strong><span>' + escapeHtml(i.horairesLunVen) + '</span></div>');
+    }
     if (i.horairesSam)    rows.push('<div class="info-row"><strong>Samedi</strong><span>'  + escapeHtml(i.horairesSam)    + '</span></div>');
     if (i.horairesDim)    rows.push('<div class="info-row"><strong>Dimanche</strong><span>'+ escapeHtml(i.horairesDim)    + '</span></div>');
     if (i.horairesFeries) rows.push('<div class="info-row"><strong>Fériés</strong><span>'  + escapeHtml(i.horairesFeries) + '</span></div>');

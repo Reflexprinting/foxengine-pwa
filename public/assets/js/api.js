@@ -136,6 +136,11 @@
       // La RPC renvoie du snake_case → on convertit ici (sinon horaires + offres ne s'affichent pas).
       infos: r.infos_boutique ? {
         horairesLunVen: r.infos_boutique.horaires_lun_ven  || '',
+        horairesLun:    r.infos_boutique.horaires_lundi    || '',
+        horairesMar:    r.infos_boutique.horaires_mardi    || '',
+        horairesMer:    r.infos_boutique.horaires_mercredi || '',
+        horairesJeu:    r.infos_boutique.horaires_jeudi    || '',
+        horairesVen:    r.infos_boutique.horaires_vendredi || '',
         horairesSam:    r.infos_boutique.horaires_samedi   || '',
         horairesDim:    r.infos_boutique.horaires_dimanche || '',
         horairesFeries: r.infos_boutique.horaires_feries   || '',
