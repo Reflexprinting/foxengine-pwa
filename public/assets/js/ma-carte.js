@@ -19,6 +19,7 @@
   // aux lancements suivants depuis l'icône.
   const STORAGE_KEY = 'foxengine_client_code';
   const COOKIE_NAME = 'foxengine_client_code';
+  const COOKIE_SIG  = 'foxengine_client_sig';   // la SIGNATURE aussi en cookie : survit à l'isolation localStorage d'iOS PWA installée
 
   function safeStorageGet() {
     try { return (localStorage.getItem(STORAGE_KEY) || '').trim(); }
@@ -31,18 +32,18 @@
 
   // Cookie : fallback ultime pour iOS PWA installée (le contexte standalone
   // partage parfois les cookies avec Safari, contrairement au localStorage).
-  function safeCookieGet() {
+  function safeCookieGet(name) {
     try {
       const all = String(document.cookie || '');
-      const re = new RegExp('(?:^|;\\s*)' + COOKIE_NAME + '=([^;]+)');
+      const re = new RegExp('(?:^|;\\s*)' + (name || COOKIE_NAME) + '=([^;]+)');
       const m = all.match(re);
       return m ? decodeURIComponent(m[1]).trim() : '';
     } catch (_) { return ''; }
   }
-  function safeCookieSet(value) {
+  function safeCookieSet(name, value) {
     try {
       const v = encodeURIComponent(String(value || ''));
-      document.cookie = COOKIE_NAME + '=' + v +
+      document.cookie = (name || COOKIE_NAME) + '=' + v +
         '; max-age=31536000; path=/; SameSite=Lax; Secure';
     } catch (_) { /* ignore */ }
   }
@@ -88,16 +89,24 @@
 
     // 4. Fallback cookie (iOS standalone : meilleur partage avec Safari)
     if (!code) {
-      code = safeCookieGet();
+      code = safeCookieGet(COOKIE_NAME);
+    }
+    // 4bis. Signature aussi via cookie — sinon la carte est refusée (LIEN_INVALIDE)
+    //        quand le raccourci iOS s'ouvre sans query string.
+    if (!sig) {
+      sig = safeCookieGet(COOKIE_SIG);
     }
 
     if (code) {
       // Mémoriser pour les visites futures (utile hors iOS isolé)
       safeStorageSet(code);
       // Mémoriser aussi côté cookie (utile iOS PWA installée)
-      safeCookieSet(code);
-      // Mémoriser la signature (indispensable pour recharger la carte plus tard)
-      if (sig) { try { localStorage.setItem('fe_card_sig', sig); } catch (_) {} }
+      safeCookieSet(COOKIE_NAME, code);
+      // Mémoriser la signature — localStorage ET cookie (le cookie survit à l'isolation iOS PWA)
+      if (sig) {
+        try { localStorage.setItem('fe_card_sig', sig); } catch (_) {}
+        safeCookieSet(COOKIE_SIG, sig);
+      }
 
       // Réinjecter ?code=XXX&sig=YYY dans l'URL pour cohérence (sans recharger).
       // IMPORTANT : on PRÉSERVE le sig, sinon Supabase renvoie "LIEN_INVALIDE".
@@ -652,6 +661,7 @@
     if (r && r.ok && r.code) {
       try { localStorage.setItem('foxengine_client_code', r.code); } catch (e) {}
       try { localStorage.setItem('fe_card_sig', r.sig || ''); } catch (e) {}
+      try { safeCookieSet(COOKIE_NAME, r.code); safeCookieSet(COOKIE_SIG, r.sig || ''); } catch (e) {}
       $('rec-msg').textContent = 'Carte retrouvée ✓';
       location.replace('/ma-carte.html?code=' + encodeURIComponent(r.code) + (r.sig ? '&sig=' + encodeURIComponent(r.sig) : ''));
       return;
