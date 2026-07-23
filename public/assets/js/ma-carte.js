@@ -258,20 +258,29 @@
 
   // ── FIDÉLITÉ ───────────────────────────────────────
   function renderFidelity(data) {
-    const cumul = Number(data.cumul || data.achatsCycle || 0);
-    const seuil = Number(data.seuilBon || 0);
-    const reste = Number(data.resteAvantBon || 0);
-    const pct   = Number(data.progressPct || 0);
+    const cumul   = Number(data.cumul || data.achatsCycle || 0);
+    const seuil   = Number(data.seuilBon || 0);
+    const reste   = Number(data.resteAvantBon || 0);
+    const pct     = Number(data.progressPct || 0);
+    const montant = Number(data.montantBon || 0);
 
-    $('fid-amount').textContent = fmtEuro(cumul);
-    $('fid-seuil').textContent  = '/ ' + fmtEuro(seuil);
+    // CAGNOTTE : valeur en euros déjà gagnée vers le bon = (cumul / seuil) x valeur_du_bon.
+    // 100 % visuel, dérivé des conditions de la boutique. Si pas de bon paramétré (montant<=0),
+    // on retombe sur l'ancien affichage cumul / seuil pour ne rien casser.
+    const cagnotteMode = (montant > 0 && seuil > 0);
+    const cagnotte = cagnotteMode ? Math.min(montant, (cumul / seuil) * montant) : cumul;
+
+    $('fid-amount').textContent = fmtEuro(cagnotte);
+    $('fid-seuil').textContent  = '/ ' + fmtEuro(cagnotteMode ? montant : seuil);
     $('fid-bar').style.width    = Math.max(0, Math.min(100, pct)) + '%';
 
     if (reste <= 0 && cumul > 0) {
-      $('fid-msg').innerHTML = '🎁 Vous avez atteint le seuil ! Un bon va être généré.';
+      $('fid-msg').innerHTML = cagnotteMode
+        ? '🎁 Cagnotte pleine ! Votre bon de ' + fmtEuro(montant) + ' est prêt.'
+        : '🎁 Vous avez atteint le seuil ! Un bon va être généré.';
     } else if (reste > 0) {
       $('fid-msg').innerHTML = 'Plus que <strong>' + fmtEuro(reste) +
-        '</strong> avant votre prochain bon de ' + fmtEuro(data.montantBon || 0);
+        '</strong> d’achats avant votre bon de ' + fmtEuro(montant);
     } else {
       $('fid-msg').textContent = 'Bienvenue dans le programme fidélité.';
     }
