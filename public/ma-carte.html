@@ -193,6 +193,14 @@
       </section>
 
 
+      <!-- TROUVER UN BŒUF TRICOLORE PRÈS DE MOI -->
+      <section class="section" id="near-section">
+        <h2 class="section-title">Un Bœuf Tricolore près de moi</h2>
+        <button id="near-btn" class="btn-primary" type="button" style="width:100%">📍 Trouver la boutique la plus proche</button>
+        <p id="near-msg" class="muted" style="margin-top:8px;text-align:center"></p>
+        <div id="near-list" style="margin-top:10px"></div>
+      </section>
+
       <!-- DATE MAJ -->
       <footer class="updated">
         Mis à jour le <span id="updated-at"></span>
@@ -556,5 +564,64 @@
   <script src="/assets/js/api.js?v=20260703d"></script>
   <script src="/assets/js/theme.js?v=20260703d"></script>
   <script src="/assets/js/ma-carte.js?v=20260703d"></script>
+
+  <!-- TROUVER UN BŒUF TRICOLORE PRÈS DE MOI — géoloc + distance (autonome) -->
+  <script>
+  (function(){
+    var EP='https://cxbyblnzlivnadyhdwtz.supabase.co/rest/v1/rpc/rpc_public_boutiques_geo';
+    var KEY='sb_publishable_XjTXt9N9A-zBhu6lZfrxXw_Hxwfi3wp';
+    var RAYON=50;
+    var btn=document.getElementById('near-btn'), msg=document.getElementById('near-msg'), list=document.getElementById('near-list');
+    if(!btn) return;
+    var jours=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+    function distKm(la1,lo1,la2,lo2){ var R=6371,dLa=(la2-la1)*Math.PI/180,dLo=(lo2-lo1)*Math.PI/180;
+      var s=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dLo/2)*Math.sin(dLo/2);
+      return R*2*Math.atan2(Math.sqrt(s),Math.sqrt(1-s)); }
+    function horaireJour(h){ if(!h) return ''; return h[jours[new Date().getDay()]]||h.lun_ven||''; }
+    btn.addEventListener('click', function(){
+      if(!navigator.geolocation){ msg.textContent='Géolocalisation non disponible sur cet appareil.'; return; }
+      msg.textContent='Localisation en cours…'; btn.disabled=true;
+      navigator.geolocation.getCurrentPosition(function(pos){
+        var lat=pos.coords.latitude, lng=pos.coords.longitude;
+        fetch(EP,{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json'},body:'{}'})
+        .then(function(r){return r.json();}).then(function(data){
+          btn.disabled=false;
+          var arr=Array.isArray(data)?data:[];
+          arr.forEach(function(b){ b._d=distKm(lat,lng,Number(b.lat),Number(b.lng)); });
+          var near=arr.filter(function(b){ return isFinite(b._d) && b._d<=RAYON; }).sort(function(a,b){ return a._d-b._d; });
+          if(!near.length){ msg.textContent='Aucune boutique du réseau dans un rayon de '+RAYON+' km.'; list.innerHTML=''; return; }
+          msg.textContent=near.length+' boutique'+(near.length>1?'s':'')+' à moins de '+RAYON+' km :';
+          list.innerHTML=near.map(function(b){
+            var km=b._d<1?(Math.round(b._d*1000)+' m'):(b._d.toFixed(b._d<10?1:0)+' km');
+            var mn=Math.max(1,Math.round(b._d*1.3)); // estimation trajet voiture (route ~1,3× vol d'oiseau, ~60 km/h)
+            var dur=mn<60?('≈ '+(mn<12?mn:Math.round(mn/5)*5)+' min'):('≈ '+Math.floor(mn/60)+' h '+(Math.round((mn%60)/5)*5)+' min');
+            var h=horaireJour(b.horaires);
+            var adr=esc(b.adresse||'');
+            var tel=String(b.telephone||'').replace(/\s+/g,'');
+            var maps='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(b.lat+','+b.lng);
+            return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px;margin-bottom:10px;text-align:left">'
+              +'<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">'
+                +'<strong style="font-size:15px">'+esc(b.enseigne||b.ville||'Boutique')+'</strong>'
+                +'<span style="color:#C1121F;font-weight:800;white-space:nowrap">'+km+'</span>'
+              +'</div>'
+              +(adr?'<div style="color:#5b6472;font-size:13px;margin-top:2px">'+adr+'</div>':'')
+              +'<div style="color:#5b6472;font-size:13px;margin-top:'+(adr?'0':'2px')+'">'+esc([b.code_postal,b.ville].filter(Boolean).join(' '))+'</div>'
+              +'<div style="color:#5b6472;font-size:13px;margin-top:4px">🚗 '+dur+' en voiture <span style="color:#9aa2b1">(estimation)</span></div>'
+              +(h?'<div style="color:#5b6472;font-size:13px;margin-top:4px">🕒 Aujourd’hui : '+esc(h)+'</div>':'')
+              +(tel?'<div style="font-size:13px;margin-top:4px">📞 <a href="tel:'+esc(tel)+'" style="color:#0B2C6F;font-weight:700">'+esc(b.telephone)+'</a></div>':'')
+              +'<a href="'+maps+'" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;color:#0B2C6F;font-weight:700;font-size:13px">Itinéraire →</a>'
+            +'</div>';
+          }).join('');
+        }).catch(function(){ btn.disabled=false; msg.textContent='Impossible de récupérer les boutiques. Réessayez.'; });
+      }, function(err){
+        btn.disabled=false;
+        msg.textContent = (err && err.code===1)
+          ? 'Localisation refusée. Autorisez la géolocalisation pour voir les boutiques proches.'
+          : 'Localisation impossible. Réessayez.';
+      }, {enableHighAccuracy:false, timeout:10000, maximumAge:60000});
+    });
+  })();
+  </script>
 </body>
 </html>
