@@ -594,15 +594,22 @@
           msg.textContent=near.length+' boutique'+(near.length>1?'s':'')+' à moins de '+RAYON+' km :';
           list.innerHTML=near.map(function(b){
             var km=b._d<1?(Math.round(b._d*1000)+' m'):(b._d.toFixed(b._d<10?1:0)+' km');
+            var mn=Math.max(1,Math.round(b._d*1.3)); // estimation trajet voiture (route ~1,3× vol d'oiseau, ~60 km/h)
+            var dur=mn<60?('≈ '+(mn<12?mn:Math.round(mn/5)*5)+' min'):('≈ '+Math.floor(mn/60)+' h '+(Math.round((mn%60)/5)*5)+' min');
             var h=horaireJour(b.horaires);
+            var adr=esc(b.adresse||'');
+            var tel=String(b.telephone||'').replace(/\s+/g,'');
             var maps='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(b.lat+','+b.lng);
             return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px;margin-bottom:10px;text-align:left">'
               +'<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">'
                 +'<strong style="font-size:15px">'+esc(b.enseigne||b.ville||'Boutique')+'</strong>'
                 +'<span style="color:#C1121F;font-weight:800;white-space:nowrap">'+km+'</span>'
               +'</div>'
-              +'<div style="color:#5b6472;font-size:13px;margin-top:2px">'+esc([b.code_postal,b.ville].filter(Boolean).join(' '))+'</div>'
+              +(adr?'<div style="color:#5b6472;font-size:13px;margin-top:2px">'+adr+'</div>':'')
+              +'<div style="color:#5b6472;font-size:13px;margin-top:'+(adr?'0':'2px')+'">'+esc([b.code_postal,b.ville].filter(Boolean).join(' '))+'</div>'
+              +'<div style="color:#5b6472;font-size:13px;margin-top:4px">🚗 '+dur+' en voiture <span style="color:#9aa2b1">(estimation)</span></div>'
               +(h?'<div style="color:#5b6472;font-size:13px;margin-top:4px">🕒 Aujourd’hui : '+esc(h)+'</div>':'')
+              +(tel?'<div style="font-size:13px;margin-top:4px">📞 <a href="tel:'+esc(tel)+'" style="color:#0B2C6F;font-weight:700">'+esc(b.telephone)+'</a></div>':'')
               +'<a href="'+maps+'" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;color:#0B2C6F;font-weight:700;font-size:13px">Itinéraire →</a>'
             +'</div>';
           }).join('');
