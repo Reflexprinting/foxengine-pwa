@@ -1,0 +1,18 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "7255J3VXJ6.com.myfoxengine.boeuftricolore",
+        "appIDs": ["7255J3VXJ6.com.myfoxengine.boeuftricolore"],
+        "paths": ["/ma-carte", "/ma-carte*", "/ma-carte.html*"],
+        "components": [
+          { "/": "/ma-carte*", "comment": "Carte de fidelite (lien signe SMS/push)" }
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["7255J3VXJ6.com.myfoxengine.boeuftricolore"]
+  }
+}
