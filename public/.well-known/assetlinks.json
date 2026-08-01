@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.myfoxengine.boeuftricolore",
+      "sha256_cert_fingerprints": [
+        "E9:74:2F:4F:81:68:90:62:E1:69:8E:D3:B5:23:A3:BE:57:B9:33:25:30:3D:85:A3:79:77:2C:A5:0E:AA:19:6D"
+      ]
+    }
+  }
+]
