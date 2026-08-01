@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Installer l'app — Le Bœuf Tricolore</title>
+<script src="/assets/js/qrcode.min.js"></script>
+<style>
+  :root{--brand:#9F1319;--bg:#f7f1e8;--card:#fff;--line:#ece1d2;--txt:#241f1a;--muted:#8a7f70;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;line-height:1.5}
+  .wrap{max-width:520px;margin:0 auto;padding:0 18px 48px}
+  header{background:var(--brand);color:#fff;border-radius:0 0 26px 26px;padding:calc(26px + env(safe-area-inset-top,0)) 20px 24px;margin:0 -18px 22px;text-align:center}
+  header .t{font-size:22px;font-weight:900;letter-spacing:-.3px}
+  header .s{font-size:14px;opacity:.92;margin-top:6px}
+  h1{font-size:19px;margin:22px 0 6px;text-align:center}
+  p.lead{color:var(--muted);text-align:center;margin:0 0 18px;font-size:15px}
+  .btn{display:block;width:100%;padding:16px;border:none;border-radius:14px;font-size:17px;font-weight:800;text-align:center;text-decoration:none;cursor:pointer;margin-top:12px}
+  .btn-primary{background:var(--brand);color:#fff}
+  .btn-dark{background:#111;color:#fff}
+  .btn-soft{background:var(--card);color:var(--txt);border:1px solid var(--line)}
+  .btn[disabled],.btn.disabled{opacity:.5;pointer-events:none}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-top:14px}
+  .card h3{margin:0 0 8px;font-size:16px}
+  .steps{margin:8px 0 0;padding-left:20px;color:var(--txt);font-size:14px}
+  .steps li{margin:4px 0}
+  .muted{color:var(--muted);font-size:13.5px}
+  .qr{display:flex;justify-content:center;margin:14px 0}
+  .qr canvas,.qr img{border-radius:12px;border:1px solid var(--line)}
+  .hide{display:none}
+  .foot{text-align:center;color:var(--muted);font-size:12px;margin-top:26px}
+  .tabs{display:flex;gap:8px;margin-top:10px}
+  .tab{flex:1;text-align:center;padding:10px;border-radius:12px;border:1px solid var(--line);background:#fff;font-weight:700;font-size:14px;cursor:pointer}
+  .tab.active{background:var(--brand);color:#fff;border-color:var(--brand)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="t">Le Bœuf Tricolore</div>
+    <div class="s">Votre carte de fidélité dans votre poche</div>
+  </header>
+
+  <h1>Installer l'application</h1>
+  <p class="lead">Cumul, bons d'achat, offres et notifications — toujours à portée de main.</p>
+
+  <!-- Choix manuel (aussi utile sur ordinateur) -->
+  <div class="tabs" id="tabs">
+    <div class="tab" data-os="ios">iPhone</div>
+    <div class="tab" data-os="android">Android / Samsung</div>
+  </div>
+
+  <!-- iPHONE -->
+  <section id="blk-ios" class="hide">
+    <div class="card">
+      <h3>📱 iPhone</h3>
+      <a id="ios-appstore" class="btn btn-dark disabled" href="#">Bientôt sur l'App Store</a>
+      <p class="muted" style="margin-top:10px">L'application arrive très bientôt sur l'App Store. En attendant, votre carte fonctionne déjà sur votre iPhone — ouvrez simplement le lien reçu par SMS.</p>
+    </div>
+  </section>
+
+  <!-- ANDROID -->
+  <section id="blk-android" class="hide">
+    <div class="card">
+      <h3>🤖 Android / Samsung</h3>
+      <a class="btn btn-primary" href="/boeuf-tricolore.apk">Télécharger l'application</a>
+      <ol class="steps">
+        <li>Appuyez sur <b>Télécharger</b>, puis ouvrez le fichier.</li>
+        <li>Si Android le demande : <b>autorisez l'installation depuis cette source</b>.</li>
+        <li>Ouvrez l'app → entrez votre <b>numéro de téléphone</b> (ou votre lien reçu par SMS) → votre carte apparaît.</li>
+      </ol>
+      <p class="muted">Un avertissement « source inconnue » peut apparaître : c'est normal, appuyez sur « Installer quand même ».</p>
+    </div>
+  </section>
+
+  <!-- ORDINATEUR : QR -->
+  <section id="blk-desktop" class="hide">
+    <div class="card">
+      <h3>💻 Depuis un ordinateur</h3>
+      <p class="muted">Scannez ce QR code avec votre téléphone <b>Android</b> pour installer l'app :</p>
+      <div class="qr" id="qr-android"></div>
+      <p class="muted">Sur iPhone, l'app arrive bientôt sur l'App Store.</p>
+    </div>
+  </section>
+
+  <div class="foot">© 2026 Le Bœuf Tricolore — FoxEngine</div>
+</div>
+
+<script>
+(function(){
+  var APK_URL = location.origin + '/boeuf-tricolore.apk';
+  var IOS_APPSTORE_URL = ''; // à remplir quand l'app est publiée sur l'App Store
+
+  function show(id){ var e=document.getElementById(id); if(e) e.classList.remove('hide'); }
+  function hide(id){ var e=document.getElementById(id); if(e) e.classList.add('hide'); }
+  function detect(){
+    var ua=navigator.userAgent||'';
+    if(/android/i.test(ua)) return 'android';
+    if(/iphone|ipad|ipod/i.test(ua) || (/Macintosh/.test(ua) && 'ontouchend' in document)) return 'ios';
+    return 'desktop';
+  }
+  function render(os){
+    hide('blk-ios'); hide('blk-android'); hide('blk-desktop');
+    document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('active', t.getAttribute('data-os')===os); });
+    if(os==='ios'){ show('blk-ios'); if(IOS_APPSTORE_URL){ var a=document.getElementById('ios-appstore'); a.href=IOS_APPSTORE_URL; a.textContent='Télécharger sur l\'App Store'; a.classList.remove('disabled'); } }
+    else if(os==='android'){ show('blk-android'); }
+    else { show('blk-desktop'); try{ new QRCode(document.getElementById('qr-android'), { text: APK_URL, width:190, height:190, colorDark:'#9F1319', colorLight:'#ffffff' }); }catch(e){} }
+  }
+  document.querySelectorAll('.tab').forEach(function(t){ t.addEventListener('click', function(){ render(t.getAttribute('data-os')); }); });
+  render(detect());
+})();
+</script>
+</body>
+</html>
