@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fidel Apps — Ma carte de fidélité</title>
+<meta name="theme-color" content="#0B2A6B">
+<style>
+  :root{--navy:#0B2A6B;--red:#C1121F;--cream:#f7f1e8;--ink:#12203f;--grey:#5b6472;--line:#e6ebf3}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--cream);color:var(--ink);min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:22px}
+  .card{width:100%;max-width:420px;background:#fff;border-radius:24px;box-shadow:0 18px 50px rgba(11,42,107,.16);padding:28px 24px}
+  .brand{text-align:center;margin-bottom:6px}
+  .brand .logo{width:64px;height:64px;border-radius:18px;background:var(--navy);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:26px}
+  h1{font-size:22px;text-align:center;margin:12px 0 2px;color:var(--navy)}
+  .sub{text-align:center;color:var(--grey);font-size:14.5px;margin:0 0 20px;line-height:1.45}
+  label{display:block;font-size:13px;font-weight:700;color:var(--grey);margin:0 0 6px}
+  input{width:100%;padding:15px;border:2px solid var(--line);border-radius:14px;font-size:17px;outline:none}
+  input:focus{border-color:var(--navy)}
+  button.main{width:100%;margin-top:14px;padding:16px;border:0;border-radius:14px;background:var(--navy);color:#fff;font-size:17px;font-weight:800;cursor:pointer}
+  button.main:disabled{opacity:.6}
+  .link{display:block;text-align:center;margin-top:14px;color:var(--navy);font-size:14px;background:none;border:0;width:100%;cursor:pointer;text-decoration:underline}
+  .msg{margin-top:12px;font-size:14px;text-align:center;min-height:18px}
+  .err{color:var(--red);font-weight:600}
+  .ok{color:#1a7d3c}
+  .hidden{display:none}
+  .choice{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:14px;border:2px solid var(--line);border-radius:16px;background:#fff;cursor:pointer;margin-top:10px}
+  .choice:hover{border-color:var(--navy)}
+  .choice .l{width:46px;height:46px;border-radius:12px;object-fit:cover;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;flex:0 0 auto;overflow:hidden}
+  .choice .l img{width:100%;height:100%;object-fit:cover}
+  .choice .t b{display:block;font-size:15.5px}
+  .choice .t span{font-size:13px;color:var(--grey)}
+  .fast{margin-bottom:16px}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="brand"><div class="logo">F</div></div>
+    <h1>Fidel Apps</h1>
+    <p class="sub">Votre carte de fidélité, dans votre poche.</p>
+
+    <!-- Reprise rapide -->
+    <div id="fast" class="fast hidden">
+      <button class="choice" id="fast-btn" type="button">
+        <span class="l" id="fast-logo">F</span>
+        <span class="t"><b id="fast-nom">Ma carte</b><span>Ouvrir ma carte</span></span>
+      </button>
+      <button class="link" id="fast-other" type="button">Utiliser un autre numéro</button>
+    </div>
+
+    <!-- Etape 1 : numero -->
+    <div id="step-phone">
+      <label for="phone">Votre numéro de téléphone</label>
+      <input id="phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="06 12 34 56 78">
+      <button class="main" id="btn-send" type="button">Recevoir mon code</button>
+      <div class="msg" id="msg1"></div>
+    </div>
+
+    <!-- Etape 2 : code -->
+    <div id="step-otp" class="hidden">
+      <label for="otp">Code reçu par SMS</label>
+      <input id="otp" type="tel" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456">
+      <button class="main" id="btn-verify" type="button">Voir ma carte</button>
+      <button class="link" id="btn-resend" type="button">Renvoyer le code</button>
+      <div class="msg" id="msg2"></div>
+    </div>
+
+    <!-- Etape 3 : choix carte -->
+    <div id="step-choose" class="hidden">
+      <p class="sub" style="margin-bottom:4px">Vous avez plusieurs cartes. Laquelle&#8201;?</p>
+      <div id="choices"></div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  var FN='https://cxbyblnzlivnadyhdwtz.supabase.co/functions/v1/fidel-recover';
+  var ANON='sb_publishable_XjTXt9N9A-zBhu6lZfrxXw_Hxwfi3wp';
+  var $=function(id){return document.getElementById(id);};
+  var PHONE='';
+
+  function show(id){ ['step-phone','step-otp','step-choose'].forEach(function(s){ $(s).classList.add('hidden'); }); $(id).classList.remove('hidden'); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+
+  async function call(action, extra){
+    try{
+      var r=await fetch(FN,{method:'POST',headers:{'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON},
+        body:JSON.stringify(Object.assign({action:action},extra||{}))});
+      return await r.json();
+    }catch(e){ return {ok:false,error:'RESEAU'}; }
+  }
+
+  function errFR(code, restant){
+    var m={CODE_INVALIDE:'Code à 6 chiffres',CODE_INCORRECT:'Code incorrect'+(restant!=null?' ('+restant+' essai(s) restant(s))':''),
+      CODE_EXPIRE:'Code expiré, redemandez-en un',AUCUN_CODE:'Aucun code en cours, redemandez-en un',
+      TROP_ESSAIS:'Trop d’essais, redemandez un code',CLIENT_INCONNU:'Aucune carte trouvée pour ce numéro',
+      TEL_INVALIDE:'Numéro invalide',RESEAU:'Connexion impossible, réessayez'};
+    return m[code]||('Erreur : '+code);
+  }
+
+  function openCard(c){
+    try{ localStorage.setItem('fidel_last', JSON.stringify({nom:c.boutique_nom||c.enseigne||'Ma carte',logo:c.logo_url||'',url:c.card_url})); }catch(e){}
+    location.href=c.card_url;
+  }
+
+  function renderChoices(cards){
+    var box=$('choices'); box.innerHTML='';
+    cards.forEach(function(c){
+      var b=document.createElement('button'); b.className='choice'; b.type='button';
+      var logo = c.logo_url ? '<img src="'+esc(c.logo_url)+'" alt="">' : esc((c.boutique_nom||'F').charAt(0));
+      b.innerHTML='<span class="l">'+logo+'</span><span class="t"><b>'+esc(c.enseigne||c.boutique_nom||'Ma boutique')+'</b><span>'+esc(c.ville||'')+'</span></span>';
+      b.addEventListener('click',function(){ openCard(c); });
+      box.appendChild(b);
+    });
+    show('step-choose');
+  }
+
+  async function doRequest(){
+    PHONE=($('phone').value||'').trim();
+    if(PHONE.replace(/\D/g,'').length<9){ $('msg1').innerHTML='<span class="err">Saisissez un numéro valide</span>'; return; }
+    $('btn-send').disabled=true; $('msg1').textContent='Envoi du code…';
+    await call('request',{phone:PHONE});
+    $('btn-send').disabled=false; $('msg1').textContent='';
+    $('msg2').innerHTML='<span class="ok">Si ce numéro a une carte, un code vient d’être envoyé par SMS.</span>';
+    show('step-otp'); setTimeout(function(){ try{ $('otp').focus(); }catch(e){} },80);
+  }
+
+  async function doVerify(){
+    var otp=($('otp').value||'').replace(/\D/g,'');
+    if(otp.length<6){ $('msg2').innerHTML='<span class="err">Code à 6 chiffres</span>'; return; }
+    $('btn-verify').disabled=true; $('msg2').textContent='Vérification…';
+    var r=await call('verify',{phone:PHONE,otp:otp});
+    $('btn-verify').disabled=false;
+    if(r&&r.ok===true){
+      var cards=r.cards||[];
+      if(cards.length===0){ $('msg2').innerHTML='<span class="err">Aucune carte trouvée</span>'; return; }
+      if(cards.length===1){ openCard(cards[0]); return; }
+      renderChoices(cards); return;
+    }
+    $('msg2').innerHTML='<span class="err">'+errFR(r&&r.error,r&&r.restant)+'</span>';
+  }
+
+  // Reprise rapide si une carte a déjà été ouverte
+  try{
+    var last=JSON.parse(localStorage.getItem('fidel_last')||'null');
+    if(last&&last.url){
+      $('fast-nom').textContent=last.nom||'Ma carte';
+      if(last.logo){ $('fast-logo').innerHTML='<img src="'+esc(last.logo)+'" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit">'; }
+      $('fast').classList.remove('hidden');
+      $('fast-btn').addEventListener('click',function(){ location.href=last.url; });
+      $('fast-other').addEventListener('click',function(){ $('fast').classList.add('hidden'); try{ $('phone').focus(); }catch(e){} });
+    }
+  }catch(e){}
+
+  $('btn-send').addEventListener('click',doRequest);
+  $('btn-verify').addEventListener('click',doVerify);
+  $('btn-resend').addEventListener('click',doRequest);
+  $('phone').addEventListener('keydown',function(e){ if(e.key==='Enter') doRequest(); });
+  $('otp').addEventListener('keydown',function(e){ if(e.key==='Enter') doVerify(); });
+})();
+</script>
+</body>
+</html>
