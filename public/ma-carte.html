@@ -648,5 +648,56 @@
     }catch(e){}
   })();
   </script>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       APP NATIVE — nettoyage UI installation PWA + acces "Gerer mes donnees".
+       - En app native (Capacitor) : masque les sections d'installation PWA
+         (l'app est deja installee) : Aide "installer", modale d'accueil, bandeau.
+       - Ajoute un bouton visible "Gerer mes donnees / mes coordonnees"
+         (transmet code+sig) apres la section "pres de moi".
+       Bloc 100% isole : ne touche NI le push NI ma-carte.js.
+       ═══════════════════════════════════════════════════════════════ -->
+  <script>
+  (function(){
+    try{
+      var isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+      if(isNative){
+        ['.help-section-install-cta','.help-section-fallback'].forEach(function(s){
+          var el=document.querySelector(s); if(el){ el.style.display='none'; }
+        });
+        var secs=document.querySelectorAll('#help-modal .help-section');
+        for(var i=0;i<secs.length;i++){
+          var h=secs[i].querySelector('h4'); if(!h){ continue; }
+          if(/Installation sur|Installer ma carte|installation ne fonctionne/i.test(h.textContent||'')){ secs[i].style.display='none'; }
+        }
+        var wm=document.getElementById('welcome-modal'); if(wm){ wm.style.display='none'; }
+        var cta=document.getElementById('fe-app-cta'); if(cta){ cta.style.display='none'; }
+      }
+      function manageHref(){
+        function qp(k){ try{ return new URLSearchParams(location.search).get(k)||''; }catch(_){ return ''; } }
+        function ls(k){ try{ return localStorage.getItem(k)||''; }catch(_){ return ''; } }
+        function ck(k){ try{ var m=String(document.cookie||'').match(new RegExp('(?:^|;\\s*)'+k+'=([^;]+)')); return m?decodeURIComponent(m[1]):''; }catch(_){ return ''; } }
+        var code=(qp('code')||ls('foxengine_client_code')||'').trim();
+        var sig =(qp('sig') ||ls('fe_card_sig')||ck('foxengine_client_sig')||'').trim();
+        return (code&&sig) ? ('/confidentialite.html?code='+encodeURIComponent(code)+'&sig='+encodeURIComponent(sig)) : '/confidentialite.html';
+      }
+      var ready=document.getElementById('state-ready');
+      if(ready && !document.getElementById('fe-manage-section')){
+        var sec=document.createElement('section');
+        sec.className='section'; sec.id='fe-manage-section';
+        var a=document.createElement('a');
+        a.className='btn-secondary';
+        a.style.cssText='display:flex;align-items:center;justify-content:center;gap:8px;width:100%;box-sizing:border-box;padding:14px 16px;border-radius:14px;text-decoration:none;font-weight:700';
+        a.textContent='⚙️ Gérer mes données / mes coordonnées';
+        a.setAttribute('href', manageHref());
+        a.addEventListener('click', function(){ a.setAttribute('href', manageHref()); });
+        sec.appendChild(a);
+        var near=document.getElementById('near-section');
+        if(near && near.parentNode){ near.parentNode.insertBefore(sec, near.nextSibling); }
+        else { ready.appendChild(sec); }
+      }
+    }catch(e){}
+  })();
+  </script>
 </body>
 </html>
