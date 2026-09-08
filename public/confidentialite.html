@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Politique de confidentialité — Le Bœuf Tricolore / FoxEngine</title>
 <style>
-  :root{--brand:#0B3D91;--txt:#1f2430;--muted:#5b6472;--line:#e6e9ef;}
+  :root{--brand:#0B3D91;--txt:#1f2430;--muted:#5b6472;--line:#e6e9ef;--ok:#1e7a45;--err:#c0392b;}
   *{box-sizing:border-box}
   body{margin:0;background:#f6f7f9;color:var(--txt);font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.6}
   .wrap{max-width:820px;margin:0 auto;padding:28px 20px 60px}
@@ -20,6 +20,19 @@
   .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-top:14px}
   .manage{background:#eef3fc;border:1px solid var(--brand)}
   .manage h2{margin-top:0}
+  /* --- Édition coordonnées --- */
+  #modifier label{display:block;font-weight:600;font-size:14px;margin-top:12px}
+  #modifier input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;font-size:15px;margin-top:4px;background:#fff}
+  #modifier input:focus{outline:none;border-color:var(--brand)}
+  #modifier .row2{display:flex;gap:10px}
+  #modifier .row2>div{flex:1}
+  #modifier .btn{display:block;width:100%;background:var(--brand);color:#fff;border:none;border-radius:10px;padding:12px 16px;font-weight:700;font-size:15px;margin-top:14px;cursor:pointer}
+  #modifier .btn:disabled{opacity:.6}
+  #modifier .btn-ghost{background:#fff;color:var(--brand);border:1.5px solid var(--brand)}
+  #modifier hr{border:none;border-top:1px solid var(--line);margin:20px 0}
+  #modifier .ok{color:var(--ok);font-weight:700;margin:10px 0 0}
+  #modifier .err{color:var(--err);font-weight:700;margin:10px 0 0}
+  #modifier .note{background:#fff7e6;border:1px solid #f4d38a;border-radius:10px;padding:10px 12px;font-size:13.5px;margin-top:10px}
 </style>
 </head>
 <body>
@@ -42,6 +55,40 @@
       <li><strong>Notifications (push) :</strong> activez ou désactivez à tout moment depuis l’application ou les réglages de votre téléphone. Prise en compte immédiate.</li>
       <li><strong>Accès, rectification, suppression, opposition :</strong> écrivez à <a href="mailto:contact@reflexprinting.fr">contact@reflexprinting.fr</a>. Votre demande est traitée dans les meilleurs délais.</li>
     </ul>
+  </div>
+
+  <div class="card" id="modifier">
+    <h2>Modifier mes coordonnées</h2>
+    <p class="muted">Mettez à jour vous-même vos informations. Vos modifications sont enregistrées de façon sécurisée.</p>
+
+    <div id="me-need" class="note" style="display:none">Pour enregistrer vos modifications, ouvrez cette page depuis votre carte de fidélité (bouton « Gérer mes données »).</div>
+
+    <label for="me-email">Adresse e-mail</label>
+    <input id="me-email" type="email" placeholder="vous@email.fr" autocomplete="email">
+
+    <label for="me-adr">Adresse</label>
+    <input id="me-adr" type="text" placeholder="N° et rue" autocomplete="street-address">
+    <div class="row2">
+      <div><label for="me-cp">Code postal</label><input id="me-cp" type="text" inputmode="numeric" placeholder="17000"></div>
+      <div><label for="me-ville">Ville</label><input id="me-ville" type="text" placeholder="Rochefort"></div>
+    </div>
+    <button class="btn" id="me-save">Enregistrer</button>
+    <p class="ok" id="me-ok" style="display:none">✅ Enregistré.</p>
+    <p class="err" id="me-err" style="display:none"></p>
+
+    <hr>
+    <label for="me-tel">Nouveau numéro de téléphone</label>
+    <p class="muted" style="margin:2px 0 6px">Pour votre sécurité, un code de validation vous sera envoyé par SMS sur ce nouveau numéro.</p>
+    <input id="me-tel" type="tel" inputmode="tel" placeholder="06 12 34 56 78" autocomplete="tel">
+    <button class="btn btn-ghost" id="me-tel-send">Recevoir le code par SMS</button>
+
+    <div id="me-otp-block" style="display:none">
+      <label for="me-otp">Code reçu par SMS</label>
+      <input id="me-otp" type="text" inputmode="numeric" maxlength="6" placeholder="123456">
+      <button class="btn" id="me-tel-verify">Valider mon nouveau numéro</button>
+    </div>
+    <p class="ok" id="me-tel-ok" style="display:none">✅ Numéro mis à jour.</p>
+    <p class="err" id="me-tel-err" style="display:none"></p>
   </div>
 
   <h2>1. Responsable du traitement</h2>
@@ -83,5 +130,69 @@
 
   <p class="muted" style="margin-top:28px">© 2026 Le Bœuf Tricolore — FoxEngine. Tous droits réservés.</p>
 </div>
+
+<script>
+(function(){
+  var FN='https://cxbyblnzlivnadyhdwtz.supabase.co/functions/v1/client-selfedit';
+  var ANON='sb_publishable_XjTXt9N9A-zBhu6lZfrxXw_Hxwfi3wp';
+  function $(id){return document.getElementById(id);}
+  function qp(k){try{return new URLSearchParams(location.search).get(k)||'';}catch(_){return '';}}
+  function ls(k){try{return localStorage.getItem(k)||'';}catch(_){return '';}}
+  var code=(qp('code')||ls('foxengine_client_code')||'').trim();
+  var sig =(qp('sig') ||ls('fe_card_sig')||'').trim();
+  var authed=!!(code&&sig);
+  if(!authed){ $('me-need').style.display='block'; }
+
+  async function call(action, extra){
+    if(!authed) return {ok:false,error:'LIEN_INVALIDE'};
+    var body=Object.assign({action:action,code:code,sig:sig}, extra||{});
+    try{
+      var r=await fetch(FN,{method:'POST',headers:{'apikey':ANON,'Authorization':'Bearer '+ANON,'Content-Type':'application/json'},body:JSON.stringify(body)});
+      return await r.json();
+    }catch(_){ return {ok:false,error:'RESEAU'}; }
+  }
+  function show(el,msg){ if(msg!=null) el.textContent=msg; el.style.display='block'; }
+  function hide(el){ el.style.display='none'; }
+  function errText(c){
+    var m={LIEN_INVALIDE:'Ouvrez cette page depuis votre carte pour enregistrer.',EMAIL_INVALIDE:'Adresse e-mail invalide.',TEL_INVALIDE:'Numéro de téléphone invalide.',CODE_INCORRECT:'Code incorrect.',CODE_EXPIRE:'Code expiré, redemandez-en un.',TROP_ESSAIS:'Trop d’essais. Redemandez un nouveau code.',AUCUN_CODE:'Aucun code en attente. Cliquez sur « Recevoir le code ».',TEL_DEJA_UTILISE:'Ce numéro est déjà utilisé par une autre carte.',CLIENT_INCONNU:'Carte introuvable.',RESEAU:'Connexion impossible, réessayez.'};
+    return m[c]||('Une erreur est survenue'+(c?(' ('+c+')'):'')+'.');
+  }
+
+  $('me-save').addEventListener('click', async function(){
+    hide($('me-ok')); hide($('me-err')); this.disabled=true;
+    var res=await call('update_contact',{
+      email:$('me-email').value.trim()||null,
+      adresse:$('me-adr').value.trim()||null,
+      code_postal:$('me-cp').value.trim()||null,
+      ville:$('me-ville').value.trim()||null
+    });
+    this.disabled=false;
+    if(res&&res.ok) show($('me-ok')); else show($('me-err'), errText(res&&res.error));
+  });
+
+  $('me-tel-send').addEventListener('click', async function(){
+    hide($('me-tel-ok')); hide($('me-tel-err'));
+    var tel=$('me-tel').value.trim();
+    if(tel.replace(/\D/g,'').length<9){ show($('me-tel-err'),'Entrez un numéro valide.'); return; }
+    this.disabled=true;
+    var res=await call('phone_request',{new_phone:tel});
+    this.disabled=false;
+    if(res&&res.ok){ $('me-otp-block').style.display='block'; show($('me-tel-ok'),'📩 Code envoyé par SMS.'); }
+    else if(res&&res.rate_limited){ $('me-otp-block').style.display='block'; show($('me-tel-ok'),'Un code vient d’être envoyé, patientez une minute.'); }
+    else show($('me-tel-err'), errText(res&&res.error));
+  });
+
+  $('me-tel-verify').addEventListener('click', async function(){
+    hide($('me-tel-ok')); hide($('me-tel-err'));
+    var tel=$('me-tel').value.trim(); var otp=$('me-otp').value.replace(/\D/g,'');
+    if(otp.length<4){ show($('me-tel-err'),'Entrez le code reçu par SMS.'); return; }
+    this.disabled=true;
+    var res=await call('phone_verify',{new_phone:tel, otp:otp});
+    this.disabled=false;
+    if(res&&res.ok){ show($('me-tel-ok'),'✅ Numéro mis à jour.'); hide($('me-otp-block')); }
+    else show($('me-tel-err'), errText(res&&res.error));
+  });
+})();
+</script>
 </body>
 </html>
