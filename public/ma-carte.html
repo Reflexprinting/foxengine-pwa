@@ -623,5 +623,30 @@
     }catch(e){}
   })();
   </script>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       LIEN "GÉRER MES DONNÉES" — transmet code+sig a /confidentialite.html
+       pour l'edition self-service des coordonnees (robustesse iOS ou le
+       localStorage peut etre isole en PWA installee).
+       Bloc 100% isole : ne touche NI le push NI ma-carte.js.
+       ═══════════════════════════════════════════════════════════════ -->
+  <script>
+  (function(){
+    try{
+      function qp(k){ try{ return new URLSearchParams(location.search).get(k)||''; }catch(_){ return ''; } }
+      function ls(k){ try{ return localStorage.getItem(k)||''; }catch(_){ return ''; } }
+      function ck(k){ try{ var m=String(document.cookie||'').match(new RegExp('(?:^|;\\s*)'+k+'=([^;]+)')); return m?decodeURIComponent(m[1]):''; }catch(_){ return ''; } }
+      function setLink(){
+        var a=document.querySelector('a.fe-rgpd-link'); if(!a) return;
+        var code=(qp('code')||ls('foxengine_client_code')||'').trim();
+        var sig =(qp('sig') ||ls('fe_card_sig')||ck('foxengine_client_sig')||'').trim();
+        if(code && sig){ a.setAttribute('href','/confidentialite.html?code='+encodeURIComponent(code)+'&sig='+encodeURIComponent(sig)); }
+      }
+      setLink();
+      var a=document.querySelector('a.fe-rgpd-link');
+      if(a){ a.addEventListener('click', setLink); }
+    }catch(e){}
+  })();
+  </script>
 </body>
 </html>
