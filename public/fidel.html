@@ -55,8 +55,6 @@
       <input id="phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="06 12 34 56 78">
       <button class="main" id="btn-send" type="button">Recevoir mon code</button>
       <div class="msg" id="msg1"></div>
-      <!-- DEMO — accès sans compte pour la revue Apple/Google (2.1a). Additif, sans effet sur le parcours client. -->
-      <button class="link" id="btn-demo" type="button">Voir une démonstration</button>
     </div>
 
     <!-- Etape 2 : code -->
@@ -156,7 +154,6 @@
   }catch(e){}
 
   $('btn-send').addEventListener('click',doRequest);
-  var _d=$('btn-demo'); if(_d){ _d.addEventListener('click',function(){ location.href='https://app.my-foxengine.com/ma-carte?code=BT-503721&sig=0cae8f812541058c364e'; }); }
   $('btn-verify').addEventListener('click',doVerify);
   $('btn-resend').addEventListener('click',doRequest);
   $('phone').addEventListener('keydown',function(e){ if(e.key==='Enter') doRequest(); });
