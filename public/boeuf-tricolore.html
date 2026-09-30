@@ -40,28 +40,35 @@
   .promo b{display:block;font-size:17px;margin-bottom:3px}
   .promo span{font-size:13.5px;opacity:.92}
   .pick{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--grey);
-    font-weight:800;text-align:center;margin:18px 0 6px}
-  .dept{display:flex;align-items:center;gap:10px;margin:16px 2px 8px;color:var(--navy);font-weight:800;font-size:13.5px}
-  .dept .num{background:var(--navy);color:#fff;border-radius:8px;padding:2px 8px;font-size:12px;letter-spacing:.5px}
-  .dept .ln{flex:1;height:2px;background:var(--line);border-radius:2px}
-  .shops{display:grid;gap:12px}
+    font-weight:800;text-align:center;margin:18px 0 10px}
+
+  .deptblock{border:2px solid var(--line);border-radius:16px;background:#fff;margin-bottom:10px;overflow:hidden;
+    box-shadow:0 4px 14px rgba(11,42,107,.05)}
+  summary.dept{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;
+    padding:14px 15px;color:var(--navy);font-weight:800;font-size:15px;user-select:none}
+  summary.dept::-webkit-details-marker{display:none}
+  summary.dept .num{background:var(--navy);color:#fff;border-radius:8px;padding:2px 8px;font-size:12px;letter-spacing:.5px;flex:0 0 auto}
+  summary.dept .nm{flex:1}
+  summary.dept .cnt{background:var(--cream);color:var(--navy);border-radius:999px;padding:1px 9px;font-size:12px}
+  summary.dept .chev{color:var(--red);font-size:20px;font-weight:900;transition:transform .18s}
+  .deptblock[open] summary.dept .chev{transform:rotate(90deg)}
+  .shops{display:grid;gap:10px;padding:0 12px 12px}
   a.shop{
     display:flex;align-items:center;gap:14px;text-decoration:none;color:var(--ink);
-    background:#fff;border:2px solid var(--line);border-radius:18px;padding:16px 16px;
-    box-shadow:0 6px 18px rgba(11,42,107,.06);transition:transform .07s,border-color .15s,box-shadow .15s
+    background:#fff;border:2px solid var(--line);border-radius:14px;padding:13px 14px;
+    transition:transform .07s,border-color .15s,box-shadow .15s
   }
-  a.shop:hover{border-color:var(--navy);box-shadow:0 12px 26px rgba(11,42,107,.14)}
+  a.shop:hover{border-color:var(--navy);box-shadow:0 10px 22px rgba(11,42,107,.12)}
   a.shop:active{transform:translateY(2px)}
   a.shop .pin{
-    width:46px;height:46px;border-radius:13px;flex:0 0 auto;
-    background:var(--cream);color:var(--navy);display:flex;align-items:center;justify-content:center;
-    font-size:22px
+    width:44px;height:44px;border-radius:12px;flex:0 0 auto;
+    background:var(--cream);color:var(--navy);display:flex;align-items:center;justify-content:center;font-size:21px
   }
   a.shop .t{flex:1;min-width:0}
-  a.shop .t b{display:block;font-size:17px;color:var(--navy);font-weight:800}
-  a.shop .t span{display:block;font-size:13px;color:var(--grey)}
-  a.shop .go{color:var(--red);font-size:22px;font-weight:900;flex:0 0 auto}
-  .foot{margin-top:26px;text-align:center;color:var(--grey);font-size:12px;line-height:1.55}
+  a.shop .t b{display:block;font-size:16px;color:var(--navy);font-weight:800}
+  a.shop .t span{display:block;font-size:12.5px;color:var(--grey)}
+  a.shop .go{color:var(--red);font-size:21px;font-weight:900;flex:0 0 auto}
+  .foot{margin-top:22px;text-align:center;color:var(--grey);font-size:12px;line-height:1.55}
   .foot b{color:var(--navy)}
 </style>
 </head>
@@ -74,44 +81,49 @@
       <p class="sub">Votre carte de fidélité gratuite.<br>Cumulez des points à chaque achat.</p>
     </div>
 
-    <div class="pick">Choisissez votre boucherie</div>
+    <div class="pick">Choisissez votre département</div>
 
-    <div class="dept"><span class="num">17</span> Charente-Maritime <span class="ln"></span></div>
-    <div class="shops">
-      <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Rochefort">
-        <span class="pin">🥩</span><span class="t"><b>Rochefort</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
-      </a>
-      <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Royan">
-        <span class="pin">🥩</span><span class="t"><b>Royan</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
-      </a>
-      <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Saint-Pierre">
-        <span class="pin">🥩</span><span class="t"><b>Saint-Pierre</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
-      </a>
-    </div>
-
-    <div class="dept"><span class="num">37</span> Indre-et-Loire <span class="ln"></span></div>
-    <div class="shops">
-      <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Tours">
-        <span class="pin">🥩</span><span class="t"><b>Tours</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
-      </a>
-    </div>
-
-    <div class="dept"><span class="num">45</span> Loiret <span class="ln"></span></div>
-    <div class="shops">
-      <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Villemandeur">
-        <span class="pin">🥩</span><span class="t"><b>Villemandeur</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
-      </a>
-      <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Bonnee">
-        <span class="pin">🥩</span><span class="t"><b>Bonnée</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
-      </a>
-    </div>
-
-    <div class="dept"><span class="num">89</span> Yonne <span class="ln"></span></div>
-    <div class="shops">
-      <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Charny">
-        <span class="pin">🥩</span><span class="t"><b>Charny</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
-      </a>
-    </div>
+    <details class="deptblock">
+      <summary class="dept"><span class="num">17</span><span class="nm">Charente-Maritime</span><span class="cnt">3</span><span class="chev">›</span></summary>
+      <div class="shops">
+        <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Rochefort">
+          <span class="pin">🥩</span><span class="t"><b>Rochefort</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
+        </a>
+        <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Royan">
+          <span class="pin">🥩</span><span class="t"><b>Royan</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
+        </a>
+        <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Saint-Pierre">
+          <span class="pin">🥩</span><span class="t"><b>Saint-Pierre</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
+        </a>
+      </div>
+    </details>
+    <details class="deptblock">
+      <summary class="dept"><span class="num">37</span><span class="nm">Indre-et-Loire</span><span class="cnt">1</span><span class="chev">›</span></summary>
+      <div class="shops">
+        <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Tours">
+          <span class="pin">🥩</span><span class="t"><b>Tours</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
+        </a>
+      </div>
+    </details>
+    <details class="deptblock">
+      <summary class="dept"><span class="num">45</span><span class="nm">Loiret</span><span class="cnt">2</span><span class="chev">›</span></summary>
+      <div class="shops">
+        <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Villemandeur">
+          <span class="pin">🥩</span><span class="t"><b>Villemandeur</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
+        </a>
+        <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Bonnee">
+          <span class="pin">🥩</span><span class="t"><b>Bonnée</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
+        </a>
+      </div>
+    </details>
+    <details class="deptblock">
+      <summary class="dept"><span class="num">89</span><span class="nm">Yonne</span><span class="cnt">1</span><span class="chev">›</span></summary>
+      <div class="shops">
+        <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Charny">
+          <span class="pin">🥩</span><span class="t"><b>Charny</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
+        </a>
+      </div>
+    </details>
 
     <ul class="perks">
       <li><span>🎟️</span> Bons d'achat</li>
