@@ -22,30 +22,16 @@
     display:flex; align-items:flex-start; justify-content:center; padding:26px 18px 40px;
   }
   .wrap{width:100%; max-width:460px}
-
-  /* Bandeau tricolore */
   .flag{height:6px;border-radius:999px;overflow:hidden;display:flex;margin:0 auto 18px;max-width:120px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
   .flag i{flex:1}.flag .b{background:#0B2A6B}.flag .w{background:#fff}.flag .r{background:#C1121F}
-
   .brand{text-align:center;margin-bottom:6px}
-  .logo{
-    width:82px;height:82px;border-radius:22px;margin:0 auto 14px;
-    background:linear-gradient(160deg,var(--navy),var(--navy-d));
-    color:#fff;display:flex;align-items:center;justify-content:center;
-    font-weight:900;font-size:38px;letter-spacing:1px;
-    box-shadow:0 14px 34px rgba(11,42,107,.35);
-  }
   .logo-img{display:block;width:100%;max-width:240px;height:auto;margin:0 auto 8px}
-  h1{font-size:25px;line-height:1.15;text-align:center;margin:6px 0 2px;color:var(--navy);font-weight:900}
-  h1 .tri{color:var(--red)}
   .sub{text-align:center;color:var(--grey);font-size:15px;margin:0 auto 4px;max-width:340px;line-height:1.5}
-
   .perks{list-style:none;padding:0;margin:16px 0 2px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .perks li{display:flex;align-items:center;gap:9px;background:#fff;border:2px solid var(--line);
     border-radius:14px;padding:11px 12px;font-size:14px;font-weight:700;color:var(--navy);
     box-shadow:0 4px 12px rgba(11,42,107,.05)}
   .perks li span{font-size:18px}
-
   .promo{
     margin:18px 0 20px;padding:16px 18px;border-radius:18px;
     background:linear-gradient(135deg,#0B2A6B,#123a8f);color:#fff;
@@ -53,10 +39,11 @@
   }
   .promo b{display:block;font-size:17px;margin-bottom:3px}
   .promo span{font-size:13.5px;opacity:.92}
-
   .pick{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--grey);
-    font-weight:800;text-align:center;margin:18px 0 12px}
-
+    font-weight:800;text-align:center;margin:18px 0 6px}
+  .dept{display:flex;align-items:center;gap:10px;margin:16px 2px 8px;color:var(--navy);font-weight:800;font-size:13.5px}
+  .dept .num{background:var(--navy);color:#fff;border-radius:8px;padding:2px 8px;font-size:12px;letter-spacing:.5px}
+  .dept .ln{flex:1;height:2px;background:var(--line);border-radius:2px}
   .shops{display:grid;gap:12px}
   a.shop{
     display:flex;align-items:center;gap:14px;text-decoration:none;color:var(--ink);
@@ -74,7 +61,6 @@
   a.shop .t b{display:block;font-size:17px;color:var(--navy);font-weight:800}
   a.shop .t span{display:block;font-size:13px;color:var(--grey)}
   a.shop .go{color:var(--red);font-size:22px;font-weight:900;flex:0 0 auto}
-
   .foot{margin-top:26px;text-align:center;color:var(--grey);font-size:12px;line-height:1.55}
   .foot b{color:var(--navy)}
 </style>
@@ -90,6 +76,7 @@
 
     <div class="pick">Choisissez votre boucherie</div>
 
+    <div class="dept"><span class="num">17</span> Charente-Maritime <span class="ln"></span></div>
     <div class="shops">
       <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Rochefort">
         <span class="pin">🥩</span><span class="t"><b>Rochefort</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
@@ -97,11 +84,32 @@
       <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Royan">
         <span class="pin">🥩</span><span class="t"><b>Royan</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
       </a>
-      <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Charny">
-        <span class="pin">🥩</span><span class="t"><b>Charny</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
-      </a>
       <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Saint-Pierre">
         <span class="pin">🥩</span><span class="t"><b>Saint-Pierre</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
+      </a>
+    </div>
+
+    <div class="dept"><span class="num">37</span> Indre-et-Loire <span class="ln"></span></div>
+    <div class="shops">
+      <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Tours">
+        <span class="pin">🥩</span><span class="t"><b>Tours</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
+      </a>
+    </div>
+
+    <div class="dept"><span class="num">45</span> Loiret <span class="ln"></span></div>
+    <div class="shops">
+      <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Villemandeur">
+        <span class="pin">🥩</span><span class="t"><b>Villemandeur</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
+      </a>
+      <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Bonnee">
+        <span class="pin">🥩</span><span class="t"><b>Bonnée</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
+      </a>
+    </div>
+
+    <div class="dept"><span class="num">89</span> Yonne <span class="ln"></span></div>
+    <div class="shops">
+      <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Charny">
+        <span class="pin">🥩</span><span class="t"><b>Charny</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
       </a>
     </div>
 
