@@ -42,6 +42,15 @@
   .pick{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--grey);
     font-weight:800;text-align:center;margin:18px 0 10px}
 
+  .searchbox{position:relative;margin:0 0 14px}
+  .searchbox .ic{position:absolute;left:15px;top:50%;transform:translateY(-50%);font-size:17px;opacity:.6}
+  #q{width:100%;padding:14px 40px 14px 42px;border:2px solid var(--line);border-radius:14px;
+     font-size:16px;background:#fff;color:var(--ink);outline:none}
+  #q:focus{border-color:var(--navy);box-shadow:0 0 0 4px rgba(11,42,107,.10)}
+  .searchbox .clr{position:absolute;right:10px;top:50%;transform:translateY(-50%);border:0;background:var(--cream);
+     color:var(--navy);width:26px;height:26px;border-radius:999px;font-size:15px;cursor:pointer;display:none}
+  .searchbox.has .clr{display:block}
+
   .deptblock{border:2px solid var(--line);border-radius:16px;background:#fff;margin-bottom:10px;overflow:hidden;
     box-shadow:0 4px 14px rgba(11,42,107,.05)}
   summary.dept{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;
@@ -68,6 +77,8 @@
   a.shop .t b{display:block;font-size:16px;color:var(--navy);font-weight:800}
   a.shop .t span{display:block;font-size:12.5px;color:var(--grey)}
   a.shop .go{color:var(--red);font-size:21px;font-weight:900;flex:0 0 auto}
+  .hide{display:none !important}
+  #noresult{display:none;text-align:center;color:var(--grey);font-size:14px;padding:6px 0 2px}
   .foot{margin-top:22px;text-align:center;color:var(--grey);font-size:12px;line-height:1.55}
   .foot b{color:var(--navy)}
 </style>
@@ -81,49 +92,58 @@
       <p class="sub">Votre carte de fidélité gratuite.<br>Cumulez des points à chaque achat.</p>
     </div>
 
-    <div class="pick">Choisissez votre département</div>
+    <div class="pick">Trouvez votre boucherie</div>
 
-    <details class="deptblock">
+    <div class="searchbox" id="sbox">
+      <span class="ic">🔍</span>
+      <input id="q" type="search" inputmode="search" autocomplete="off" placeholder="Votre ville ou département…">
+      <button class="clr" id="clr" type="button" aria-label="Effacer">✕</button>
+    </div>
+
+    <div id="list">
+    <details class="deptblock" data-dept="17 charente-maritime">
       <summary class="dept"><span class="num">17</span><span class="nm">Charente-Maritime</span><span class="cnt">3</span><span class="chev">›</span></summary>
       <div class="shops">
-        <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Rochefort">
+        <a class="shop" data-town="rochefort" href="https://admin.my-foxengine.com/inscription.html?b=Rochefort">
           <span class="pin">🥩</span><span class="t"><b>Rochefort</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
         </a>
-        <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Royan">
+        <a class="shop" data-town="royan" href="https://admin.my-foxengine.com/inscription.html?b=Royan">
           <span class="pin">🥩</span><span class="t"><b>Royan</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
         </a>
-        <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Saint-Pierre">
+        <a class="shop" data-town="saint-pierre oleron oléron" href="https://admin.my-foxengine.com/inscription.html?b=Saint-Pierre">
           <span class="pin">🥩</span><span class="t"><b>Saint-Pierre</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
         </a>
       </div>
     </details>
-    <details class="deptblock">
+    <details class="deptblock" data-dept="37 indre-et-loire">
       <summary class="dept"><span class="num">37</span><span class="nm">Indre-et-Loire</span><span class="cnt">1</span><span class="chev">›</span></summary>
       <div class="shops">
-        <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Tours">
+        <a class="shop" data-town="tours" href="https://admin.my-foxengine.com/inscription.html?b=Tours">
           <span class="pin">🥩</span><span class="t"><b>Tours</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
         </a>
       </div>
     </details>
-    <details class="deptblock">
+    <details class="deptblock" data-dept="45 loiret">
       <summary class="dept"><span class="num">45</span><span class="nm">Loiret</span><span class="cnt">2</span><span class="chev">›</span></summary>
       <div class="shops">
-        <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Villemandeur">
+        <a class="shop" data-town="villemandeur montargis amilly" href="https://admin.my-foxengine.com/inscription.html?b=Villemandeur">
           <span class="pin">🥩</span><span class="t"><b>Villemandeur</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
         </a>
-        <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Bonnee">
+        <a class="shop" data-town="bonnee bonnée sully" href="https://admin.my-foxengine.com/inscription.html?b=Bonnee">
           <span class="pin">🥩</span><span class="t"><b>Bonnée</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
         </a>
       </div>
     </details>
-    <details class="deptblock">
+    <details class="deptblock" data-dept="89 yonne">
       <summary class="dept"><span class="num">89</span><span class="nm">Yonne</span><span class="cnt">1</span><span class="chev">›</span></summary>
       <div class="shops">
-        <a class="shop" href="https://admin.my-foxengine.com/inscription.html?b=Charny">
+        <a class="shop" data-town="charny puisaye" href="https://admin.my-foxengine.com/inscription.html?b=Charny">
           <span class="pin">🥩</span><span class="t"><b>Charny</b><span>Créer ma carte de fidélité</span></span><span class="go">›</span>
         </a>
       </div>
     </details>
+    </div>
+    <div id="noresult">Aucune boucherie trouvée. Essayez une autre ville ou département.</div>
 
     <ul class="perks">
       <li><span>🎟️</span> Bons d'achat</li>
@@ -142,5 +162,36 @@
       Programme de fidélité <b>Le Bœuf Tricolore</b> — inscription gratuite, données protégées (RGPD).
     </div>
   </div>
+
+<script>
+(function(){
+  var q=document.getElementById('q'), clr=document.getElementById('clr'),
+      sbox=document.getElementById('sbox'), nores=document.getElementById('noresult'),
+      blocks=[].slice.call(document.querySelectorAll('.deptblock'));
+  function norm(s){return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
+  function apply(){
+    var v=norm(q.value.trim());
+    sbox.classList.toggle('has', q.value.length>0);
+    var anyBlock=false;
+    blocks.forEach(function(bl){
+      var dept=norm(bl.getAttribute('data-dept'));
+      var shops=[].slice.call(bl.querySelectorAll('a.shop'));
+      var vis=0;
+      shops.forEach(function(a){
+        var hay=norm(a.getAttribute('data-town'))+' '+dept;
+        var ok = v==='' || hay.indexOf(v)>-1;
+        a.classList.toggle('hide', !ok);
+        if(ok) vis++;
+      });
+      if(v===''){ bl.classList.remove('hide'); bl.open=false; anyBlock=true; }
+      else { var show=vis>0; bl.classList.toggle('hide', !show); bl.open=show; if(show) anyBlock=true; }
+    });
+    nores.style.display = (v!=='' && !anyBlock) ? 'block' : 'none';
+  }
+  q.addEventListener('input', apply);
+  clr.addEventListener('click', function(){ q.value=''; apply(); q.focus(); });
+  apply();
+})();
+</script>
 </body>
 </html>
