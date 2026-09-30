@@ -158,8 +158,9 @@
     </div>
 
     <div class="foot">
+      inscription gratuite, données protégées (RGPD).<br>
       Déjà client ? Choisissez votre boutique puis « Déjà client ? Récupérer ma carte ».<br>
-      Programme de fidélité <b>Le Bœuf Tricolore</b> — inscription gratuite, données protégées (RGPD).
+      Programme de fidélité <b>Le Bœuf Tricolore</b>
     </div>
   </div>
 
@@ -168,8 +169,10 @@
   var q=document.getElementById('q'), clr=document.getElementById('clr'),
       sbox=document.getElementById('sbox'), nores=document.getElementById('noresult'),
       blocks=[].slice.call(document.querySelectorAll('.deptblock'));
+  var suppress=false;
   function norm(s){return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
   function apply(){
+    suppress=true;
     var v=norm(q.value.trim());
     sbox.classList.toggle('has', q.value.length>0);
     var anyBlock=false;
@@ -187,7 +190,15 @@
       else { var show=vis>0; bl.classList.toggle('hide', !show); bl.open=show; if(show) anyBlock=true; }
     });
     nores.style.display = (v!=='' && !anyBlock) ? 'block' : 'none';
+    suppress=false;
   }
+  blocks.forEach(function(bl){
+    bl.addEventListener('toggle', function(){
+      if(bl.open && !suppress){
+        blocks.forEach(function(o){ if(o!==bl) o.open=false; });
+      }
+    });
+  });
   q.addEventListener('input', apply);
   clr.addEventListener('click', function(){ q.value=''; apply(); q.focus(); });
   apply();
