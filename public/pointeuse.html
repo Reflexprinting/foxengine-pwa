@@ -127,6 +127,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <script>
 (function(){
   'use strict';
@@ -192,15 +193,59 @@
     else{b.textContent='Pointer mon arrivée';b.classList.remove('out');$('ptState').innerHTML='Vous êtes <b>hors service</b>.';}
   }
 
-  window.pointer=async function(){
-    var b=$('btnPointer');b.disabled=true;
-    var r=await sb.rpc('rpc_pt_toggle',{p_boutique:S.boutique,p_salarie:S.salarie,p_pin:S.pin});
-    b.disabled=false;
+  var SCAN={stream:null,raf:null,busy:false};
+  window.pointer=function(){ startScan(); };
+
+  async function startScan(){
+    SCAN.busy=false;
+    $('scanMsg').textContent='Placez le code dans le cadre…';
+    $('scan').classList.remove('hide');
+    try{
+      SCAN.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+    }catch(e){
+      $('scan').classList.add('hide');
+      msg($('ptMsg'),'Caméra inaccessible. Autorisez la caméra pour scanner le QR de la caisse.',false);
+      return;
+    }
+    var v=$('scanVid');v.srcObject=SCAN.stream;await v.play();
+    var cv=document.createElement('canvas');var cx=cv.getContext('2d',{willReadFrequently:true});
+    function loop(){
+      if(!SCAN.stream)return;
+      if(v.readyState===v.HAVE_ENOUGH_DATA){
+        cv.width=v.videoWidth;cv.height=v.videoHeight;
+        cx.drawImage(v,0,0,cv.width,cv.height);
+        var img=cx.getImageData(0,0,cv.width,cv.height);
+        var code=window.jsQR?jsQR(img.data,img.width,img.height,{inversionAttempts:'dontInvert'}):null;
+        if(code&&code.data){onCode(code.data);return;}
+      }
+      SCAN.raf=requestAnimationFrame(loop);
+    }
+    SCAN.raf=requestAnimationFrame(loop);
+  }
+
+  window.stopScan=function(){
+    if(SCAN.raf)cancelAnimationFrame(SCAN.raf);SCAN.raf=null;
+    if(SCAN.stream){SCAN.stream.getTracks().forEach(function(t){t.stop();});SCAN.stream=null;}
+    $('scan').classList.add('hide');
+  };
+
+  function onCode(data){
+    if(SCAN.busy)return;
+    var p=String(data).split(':'); // FEPT1:<boutique>:<token>
+    if(p[0]!=='FEPT1'){$('scanMsg').textContent='Ce code n\'est pas un QR de pointage.';return;}
+    if(p[1]!==S.boutique){$('scanMsg').textContent='QR d\'une autre boutique. Scannez celui de '+S.boutique+'.';return;}
+    SCAN.busy=true;$('scanMsg').textContent='Code lu, pointage en cours…';
+    doPointage(p[2]);
+  }
+
+  async function doPointage(token){
+    var r=await sb.rpc('rpc_pt_toggle',{p_boutique:S.boutique,p_salarie:S.salarie,p_pin:S.pin,p_token:token});
+    stopScan();
     if(r.error){msg($('ptMsg'),traduire(r.error),false);return;}
     renderPt(r.data);
     msg($('ptMsg'), r.data.action==='entree'?'Arrivée enregistrée. Bonne journée !':'Départ enregistré. À bientôt !', true);
     setTimeout(function(){msg($('ptMsg'),'',true);},3500);
-  };
+  }
 
   window.showTab=function(t){
     $('tabPt').classList.toggle('act',t==='pt');$('tabCg').classList.toggle('act',t==='cg');
@@ -242,6 +287,8 @@
     if(m.indexOf('PIN_INVALIDE')>=0)return'Code incorrect.';
     if(m.indexOf('SALARIE_INCONNU')>=0)return'Salarié introuvable pour cette boutique.';
     if(m.indexOf('POINTEUSE_INACTIVE')>=0)return'La pointeuse n\'est pas activée pour cette boutique.';
+    if(m.indexOf('PRESENCE_REFUSEE')>=0)return'Code de caisse invalide ou expiré. Rescannez le QR affiché à la caisse.';
+    if(m.indexOf('PRESENCE_REQUISE')>=0)return'Vous devez scanner le QR de la caisse pour pointer.';
     if(m.indexOf('CONGES_NON_AUTORISES')>=0)return'Vous n\'êtes pas autorisé à demander des congés.';
     if(m.indexOf('DATES_INVALIDES')>=0)return'Dates invalides.';
     if(m.indexOf('TYPE_INVALIDE')>=0)return'Type de demande invalide.';
@@ -251,5 +298,21 @@
   buildPad();loadBoutiques();
 })();
 </script>
+<!-- Scanner QR présence -->
+<div id="scan" class="scan hide">
+  <div class="scanhead">Scannez le QR affiché à la caisse</div>
+  <div class="scanframe"><video id="scanVid" playsinline></video><div class="scanmark"></div></div>
+  <div id="scanMsg" class="scaninfo">Placez le code dans le cadre…</div>
+  <button class="btn ghost" onclick="stopScan()">Annuler</button>
+</div>
+<style>
+  .scan{position:fixed;inset:0;background:#0b1020;color:#fff;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:14px}
+  .scanhead{font-size:17px;font-weight:700;text-align:center}
+  .scanframe{position:relative;width:min(80vw,320px);height:min(80vw,320px);border-radius:18px;overflow:hidden;background:#000}
+  .scanframe video{width:100%;height:100%;object-fit:cover}
+  .scanmark{position:absolute;inset:14px;border:3px solid rgba(255,255,255,.9);border-radius:14px;box-shadow:0 0 0 2000px rgba(0,0,0,.25)}
+  .scaninfo{font-size:14px;color:#c7d2ea;text-align:center;min-height:20px}
+  .scan .btn.ghost{background:transparent;color:#fff;border:1.5px solid #fff}
+</style>
 </body>
 </html>
