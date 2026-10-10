@@ -198,16 +198,27 @@
 
   async function startScan(){
     SCAN.busy=false;
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+      msg($('ptMsg'),'Ce navigateur bloque la caméra. Ouvrez la page directement dans Safari ou Chrome (pas depuis un navigateur intégré à une autre application).',false);
+      return;
+    }
     $('scanMsg').textContent='Placez le code dans le cadre…';
     $('scan').classList.remove('hide');
     try{
-      SCAN.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+      SCAN.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
     }catch(e){
       $('scan').classList.add('hide');
-      msg($('ptMsg'),'Caméra inaccessible. Autorisez la caméra pour scanner le QR de la caisse.',false);
+      var t='Caméra inaccessible.';
+      if(e&&e.name==='NotAllowedError')t='Caméra refusée. Autorisez la caméra pour ce site dans les réglages du navigateur, puis réessayez.';
+      else if(e&&e.name==='NotFoundError')t='Aucune caméra détectée sur cet appareil.';
+      else if(e&&e.name==='NotReadableError')t='La caméra est déjà utilisée par une autre application. Fermez-la et réessayez.';
+      else if(e&&e.name==='SecurityError')t='La caméra nécessite une connexion sécurisée (https).';
+      else if(e&&e.message)t='Caméra inaccessible : '+e.name+'.';
+      msg($('ptMsg'),t,false);
       return;
     }
-    var v=$('scanVid');v.srcObject=SCAN.stream;await v.play();
+    var v=$('scanVid');v.srcObject=SCAN.stream;v.muted=true;v.setAttribute('muted','');v.setAttribute('playsinline','');
+    try{await v.play();}catch(e){}
     var cv=document.createElement('canvas');var cx=cv.getContext('2d',{willReadFrequently:true});
     function loop(){
       if(!SCAN.stream)return;
