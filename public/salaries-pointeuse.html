@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FoxManager · Pointeuse & congés</title>
+<style>
+  :root{--bleu:#0b3d91;--bleuf:#082d6b;--rouge:#ad0000;--vert:#1e7a46;--gris:#5b6472;--grisc:#eef1f5;--txt:#2b2f36;--bg:#f6f8fc;}
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;}
+  .top{background:var(--bleu);color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between}
+  .top .b{font-weight:700}
+  .wrap{max-width:900px;margin:18px auto;padding:0 16px}
+  .card{background:#fff;border:1px solid #e3e8f0;border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 1px 2px rgba(10,30,80,.04)}
+  h2{font-size:16px;color:var(--bleu);margin:0 0 12px}
+  label{font-size:13px;color:var(--gris);font-weight:600;margin-right:8px}
+  select,input{padding:9px;border:1.5px solid #d4dbe8;border-radius:9px;font-size:14px;background:#fff}
+  button{cursor:pointer}
+  .btn{border:none;border-radius:9px;padding:9px 14px;font-weight:700;color:#fff;background:var(--bleu);font-size:14px}
+  .btn.ghost{background:#fff;color:var(--bleu);border:1.5px solid var(--bleu)}
+  .btn.ok{background:var(--vert)} .btn.no{background:var(--rouge)}
+  .seg button{background:var(--grisc);color:var(--gris);border:none;padding:8px 12px;font-weight:700}
+  .seg button.act{background:var(--bleu);color:#fff}
+  .seg button:first-child{border-radius:9px 0 0 9px}.seg button:last-child{border-radius:0 9px 9px 0}
+  table{border-collapse:collapse;width:100%;font-size:14px}
+  th,td{padding:9px 10px;border-bottom:1px solid #eef1f5;text-align:left}
+  th{background:#f2f5fa;color:var(--gris);font-size:12px;text-transform:uppercase;letter-spacing:.3px}
+  td.r,th.r{text-align:right}
+  .badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px}
+  .b-att{background:#fff4e0;color:#9a6b00}.b-ok{background:#e9f6ee;color:var(--vert)}.b-no{background:#fdeaea;color:var(--rouge)}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--vert);margin-left:6px}
+  .msg{font-size:14px;padding:10px 12px;border-radius:10px;margin-top:10px}
+  .msg.err{background:#fdeaea;color:var(--rouge)}.msg.ok{background:#e9f6ee;color:var(--vert)}
+  .hide{display:none} .muted{color:#9aa4b2;font-size:13px}
+  .login{max-width:380px;margin:60px auto}
+</style>
+</head>
+<body>
+<div class="top"><div class="b">FoxManager · Pointeuse & congés</div><button id="btnOut" class="btn ghost hide" onclick="signOut()">Déconnexion</button></div>
+
+<!-- Connexion manager -->
+<div id="login" class="login card">
+  <h2>Connexion responsable</h2>
+  <p class="muted">Identifiants de votre compte FoxManager.</p>
+  <div><label>E-mail</label><br><input id="email" type="email" style="width:100%;margin-top:6px"></div>
+  <div style="margin-top:10px"><label>Mot de passe</label><br><input id="pass" type="password" style="width:100%;margin-top:6px"></div>
+  <button class="btn" style="margin-top:14px;width:100%" onclick="signIn()">Se connecter</button>
+  <div id="loginMsg"></div>
+</div>
+
+<!-- Console -->
+<div id="console" class="wrap hide">
+  <div class="card">
+    <h2>Boutique</h2>
+    <label>Boutique</label>
+    <select id="selBoutique" onchange="refresh()"></select>
+    <span id="role" class="muted" style="margin-left:10px"></span>
+  </div>
+
+  <div class="card">
+    <h2>Demandes de congés en attente</h2>
+    <div id="congesWrap"><p class="muted">Chargement…</p></div>
+    <div id="congesMsg"></div>
+    <details style="margin-top:12px"><summary class="muted" style="cursor:pointer">Voir l'historique (validées / refusées)</summary>
+      <div id="congesHist" style="margin-top:10px"></div></details>
+  </div>
+
+  <div class="card">
+    <h2>Heures pointées
+      <span class="seg" style="float:right">
+        <button id="segSem" class="act" onclick="setRange('sem')">Cette semaine</button>
+        <button id="segMois" onclick="setRange('mois')">Ce mois</button>
+      </span>
+    </h2>
+    <div id="ptWrap"><p class="muted">Chargement…</p></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){
+  'use strict';
+  var SUPABASE_URL='https://cxbyblnzlivnadyhdwtz.supabase.co';
+  var SUPABASE_KEY='sb_publishable_XjTXt9N9A-zBhu6lZfrxXw_Hxwfi3wp';
+  var sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+  var ST={role:'',stores:[],boutique:'',range:'sem'};
+
+  function $(id){return document.getElementById(id);}
+  function hmin(m){m=Math.max(0,Math.round(m||0));var h=Math.floor(m/60),r=m%60;return r?h+' h '+String(r).padStart(2,'0'):h+' h';}
+  function fdate(d){if(!d)return'';var p=String(d).split('-');return p[2]+'/'+p[1]+'/'+p[0];}
+  function msg(el,t,ok){el.innerHTML=t?'<div class="msg '+(ok?'ok':'err')+'">'+t+'</div>':'';}
+  var LBL={conges_payes:'Congés payés',arret_maladie:'Arrêt maladie',absence:'Absence'};
+
+  function claimsFromSession(s){
+    try{var t=s.access_token.split('.')[1];var b=t.replace(/-/g,'+').replace(/_/g,'/');return JSON.parse(atob(b));}catch(e){return {};}
+  }
+  function rangeDates(){
+    var tz=new Date();var now=new Date(tz.getFullYear(),tz.getMonth(),tz.getDate());
+    if(ST.range==='mois'){var d=new Date(now.getFullYear(),now.getMonth(),1);return [iso(d),iso(now)];}
+    var day=(now.getDay()+6)%7;var mon=new Date(now);mon.setDate(now.getDate()-day);return [iso(mon),iso(now)];
+  }
+  function iso(d){return d.toISOString().slice(0,10);}
+
+  window.signIn=async function(){
+    msg($('loginMsg'),'',true);
+    var r=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('pass').value});
+    if(r.error){msg($('loginMsg'),'Identifiants incorrects.',false);return;}
+    boot(r.data.session);
+  };
+  window.signOut=async function(){await sb.auth.signOut();location.reload();};
+
+  function boot(session){
+    var c=claimsFromSession(session);
+    var meta=c.app_metadata||{};
+    ST.role=meta.role_code||'';ST.stores=Array.isArray(meta.allowed_stores)?meta.allowed_stores:[];
+    if(ST.role!=='SA'&&ST.role!=='MANAGER'){msg($('loginMsg'),'Accès réservé aux responsables.',false);sb.auth.signOut();return;}
+    $('login').classList.add('hide');$('console').classList.remove('hide');$('btnOut').classList.remove('hide');
+    $('role').textContent=ST.role==='SA'?'SuperAdmin':'Responsable';
+    fillBoutiques();
+  }
+
+  async function fillBoutiques(){
+    var sel=$('selBoutique');sel.innerHTML='';
+    var list=ST.stores.slice();
+    // SA : complète avec les boutiques où la pointeuse est active
+    if(ST.role==='SA'){
+      var r=await sb.rpc('rpc_pt_boutiques_actives');
+      if(!r.error&&r.data){r.data.forEach(function(b){if(list.indexOf(b.id)<0)list.push(b.id);});}
+    }
+    if(!list.length){sel.innerHTML='<option>Aucune boutique</option>';return;}
+    list.forEach(function(id){var o=document.createElement('option');o.value=id;o.textContent=id;sel.appendChild(o);});
+    ST.boutique=list[0];refresh();
+  }
+
+  window.setRange=function(r){ST.range=r;$('segSem').classList.toggle('act',r==='sem');$('segMois').classList.toggle('act',r==='mois');loadPointages();};
+  window.refresh=function(){ST.boutique=$('selBoutique').value;loadConges();loadPointages();};
+
+  async function loadConges(){
+    var r=await sb.rpc('rpc_pt_mgr_conges',{p_boutique:ST.boutique,p_statut:'en_attente'});
+    var w=$('congesWrap');
+    if(r.error){w.innerHTML='<p class="muted">Indisponible : '+(r.error.message||'')+'</p>';return;}
+    if(!r.data.length){w.innerHTML='<p class="muted">Aucune demande en attente.</p>';}
+    else{
+      w.innerHTML='<table><thead><tr><th>Salarié</th><th>Type</th><th>Période</th><th>Motif</th><th class="r">Action</th></tr></thead><tbody>'+
+      r.data.map(function(c){return '<tr><td>'+esc(c.salarie_nom||'')+'</td><td>'+(LBL[c.type]||c.type)+'</td><td>'+fdate(c.date_debut)+' → '+fdate(c.date_fin)+'</td><td class="muted">'+esc(c.motif||'')+'</td>'+
+        '<td class="r"><button class="btn ok" onclick="decider(\''+c.id+'\',\'validee\')">Valider</button> '+
+        '<button class="btn no" onclick="decider(\''+c.id+'\',\'refusee\')">Refuser</button></td></tr>';}).join('')+'</tbody></table>';
+    }
+    // historique
+    var h=await sb.rpc('rpc_pt_mgr_conges',{p_boutique:ST.boutique,p_statut:null});
+    if(!h.error){var done=h.data.filter(function(c){return c.statut!=='en_attente';});
+      $('congesHist').innerHTML=done.length?('<table><tbody>'+done.map(function(c){var bcl=c.statut==='validee'?'b-ok':'b-no';var bt=c.statut==='validee'?'Validée':'Refusée';
+        return '<tr><td>'+esc(c.salarie_nom||'')+'</td><td>'+(LBL[c.type]||c.type)+'</td><td>'+fdate(c.date_debut)+' → '+fdate(c.date_fin)+'</td><td class="r"><span class="badge '+bcl+'">'+bt+'</span></td></tr>';}).join('')+'</tbody></table>'):'<p class="muted">Rien pour le moment.</p>';
+    }
+  }
+  window.decider=async function(id,dec){
+    var r=await sb.rpc('rpc_pt_conge_decider',{p_demande:id,p_decision:dec});
+    if(r.error){msg($('congesMsg'),'Action impossible : '+(r.error.message||''),false);return;}
+    msg($('congesMsg'),dec==='validee'?'Demande validée.':'Demande refusée.',true);loadConges();
+  };
+
+  async function loadPointages(){
+    var d=rangeDates();
+    var r=await sb.rpc('rpc_pt_mgr_pointages',{p_boutique:ST.boutique,p_debut:d[0],p_fin:d[1]});
+    var w=$('ptWrap');
+    if(r.error){w.innerHTML='<p class="muted">Indisponible : '+(r.error.message||'')+'</p>';return;}
+    if(!r.data.length){w.innerHTML='<p class="muted">Aucun salarié.</p>';return;}
+    var tot=r.data.reduce(function(a,x){return a+(x.total_minutes||0);},0);
+    w.innerHTML='<p class="muted">Du '+fdate(d[0])+' au '+fdate(d[1])+' · total équipe <b>'+hmin(tot)+'</b></p>'+
+      '<table><thead><tr><th>Salarié</th><th class="r">Heures</th><th class="r">Sessions</th><th>Statut</th></tr></thead><tbody>'+
+      r.data.map(function(x){return '<tr><td>'+esc(x.nom_complet)+'</td><td class="r"><b>'+hmin(x.total_minutes)+'</b></td><td class="r">'+(x.nb_sessions||0)+'</td><td>'+(x.en_cours?'<span class="badge b-ok">En service</span>':'<span class="muted">—</span>')+'</td></tr>';}).join('')+'</tbody></table>';
+  }
+
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+  // reprise de session si déjà connecté
+  sb.auth.getSession().then(function(r){if(r.data&&r.data.session)boot(r.data.session);});
+})();
+</script>
+</body>
+</html>
