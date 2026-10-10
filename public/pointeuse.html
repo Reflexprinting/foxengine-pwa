@@ -203,6 +203,7 @@
       return;
     }
     $('scanMsg').textContent='Placez le code dans le cadre…';
+    $('btnManuel').classList.add('hide');
     $('scan').classList.remove('hide');
     try{
       SCAN.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
@@ -217,22 +218,36 @@
       msg($('ptMsg'),t,false);
       return;
     }
-    var v=$('scanVid');v.srcObject=SCAN.stream;v.muted=true;v.setAttribute('muted','');v.setAttribute('playsinline','');
+    var v=$('scanVid');v.srcObject=SCAN.stream;v.muted=true;v.setAttribute('muted','');v.setAttribute('playsinline','');v.setAttribute('autoplay','');
+    $('scanMsg').textContent='Caméra connectée, démarrage de l\'image…';
     try{await v.play();}catch(e){}
     var cv=document.createElement('canvas');var cx=cv.getContext('2d',{willReadFrequently:true});
+    var seen=false, t0=Date.now();
     function loop(){
       if(!SCAN.stream)return;
-      if(v.readyState===v.HAVE_ENOUGH_DATA){
+      if(v.videoWidth>0&&v.videoHeight>0){
+        if(!seen){seen=true;$('scanMsg').textContent='Visez le QR de la caisse.';}
         cv.width=v.videoWidth;cv.height=v.videoHeight;
         cx.drawImage(v,0,0,cv.width,cv.height);
         var img=cx.getImageData(0,0,cv.width,cv.height);
         var code=window.jsQR?jsQR(img.data,img.width,img.height,{inversionAttempts:'dontInvert'}):null;
         if(code&&code.data){onCode(code.data);return;}
+      } else if(!seen && Date.now()-t0>3500){
+        $('scanMsg').innerHTML='La caméra ne renvoie pas d\'image sur cet appareil.<br>Utilisez « Saisir le code » ci-dessous.';
+        $('btnManuel').classList.remove('hide');
       }
       SCAN.raf=requestAnimationFrame(loop);
     }
     SCAN.raf=requestAnimationFrame(loop);
   }
+
+  window.saisieManuelle=function(){
+    var code=window.prompt('Saisissez le code affiché sous le QR à la caisse :','');
+    if(!code)return;
+    code=code.trim().toLowerCase();
+    if(code.length<16){alert('Code trop court. Recopiez le code complet affiché à la caisse.');return;}
+    SCAN.busy=true;doPointage(code);
+  };
 
   window.stopScan=function(){
     if(SCAN.raf)cancelAnimationFrame(SCAN.raf);SCAN.raf=null;
@@ -314,6 +329,7 @@
   <div class="scanhead">Scannez le QR affiché à la caisse</div>
   <div class="scanframe"><video id="scanVid" playsinline></video><div class="scanmark"></div></div>
   <div id="scanMsg" class="scaninfo">Placez le code dans le cadre…</div>
+  <button id="btnManuel" class="btn ghost hide" onclick="saisieManuelle()">Saisir le code</button>
   <button class="btn ghost" onclick="stopScan()">Annuler</button>
 </div>
 <style>
