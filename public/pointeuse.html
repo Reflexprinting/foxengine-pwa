@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b3d91">
+<title>FoxEngine · Pointeuse salarié</title>
+<style>
+  :root{
+    --bleu:#0b3d91; --bleuf:#082d6b; --rouge:#ad0000; --vert:#1e7a46;
+    --gris:#5b6472; --grisc:#eef1f5; --txt:#2b2f36; --bg:#f6f8fc; --card:#ffffff;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  .wrap{max-width:460px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;}
+  header{background:var(--bleu);color:#fff;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;}
+  header .brand{font-weight:700;font-size:17px}
+  header .sub{font-size:12px;color:#c7d2ea}
+  header button{background:transparent;border:1px solid #4e6bb0;color:#fff;border-radius:8px;padding:6px 10px;font-size:13px}
+  main{flex:1;padding:18px 16px 28px;}
+  .card{background:var(--card);border:1px solid #e3e8f0;border-radius:14px;padding:18px;margin-bottom:14px;box-shadow:0 1px 2px rgba(10,30,80,.04)}
+  h1{font-size:18px;margin:0 0 4px;color:var(--bleu)}
+  label{display:block;font-size:13px;color:var(--gris);margin:12px 0 6px;font-weight:600}
+  select,input{width:100%;padding:13px;border:1.5px solid #d4dbe8;border-radius:10px;font-size:16px;background:#fff;color:var(--txt)}
+  select:focus,input:focus{outline:none;border-color:var(--bleu)}
+  .btn{width:100%;border:none;border-radius:12px;padding:15px;font-size:16px;font-weight:700;color:#fff;background:var(--bleu);margin-top:16px}
+  .btn.ghost{background:#fff;color:var(--bleu);border:1.5px solid var(--bleu)}
+  .btn:disabled{opacity:.5}
+  .pin{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px}
+  .pin button{padding:18px;font-size:20px;font-weight:700;border:1.5px solid #d4dbe8;border-radius:12px;background:#fff;color:var(--txt)}
+  .pin button.act{background:var(--grisc)}
+  .pindots{text-align:center;font-size:26px;letter-spacing:8px;height:30px;color:var(--bleu)}
+  .big{width:100%;border:none;border-radius:18px;padding:30px 16px;font-size:24px;font-weight:800;color:#fff;background:var(--vert);box-shadow:0 6px 16px rgba(30,122,70,.3)}
+  .big.out{background:var(--rouge);box-shadow:0 6px 16px rgba(173,0,0,.3)}
+  .state{text-align:center;font-size:14px;color:var(--gris);margin:4px 0 14px}
+  .state b{color:var(--txt)}
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+  .tile{background:var(--grisc);border-radius:12px;padding:14px;text-align:center}
+  .tile .n{font-size:22px;font-weight:800;color:var(--bleu)}
+  .tile .l{font-size:11px;color:var(--gris)}
+  .tabs{display:flex;gap:8px;margin:6px 0 14px}
+  .tabs button{flex:1;padding:10px;border:none;border-radius:10px;background:var(--grisc);color:var(--gris);font-weight:700;font-size:14px}
+  .tabs button.act{background:var(--bleu);color:#fff}
+  .msg{font-size:14px;padding:10px 12px;border-radius:10px;margin-top:12px}
+  .msg.err{background:#fdeaea;color:var(--rouge);border-left:4px solid var(--rouge)}
+  .msg.ok{background:#e9f6ee;color:var(--vert);border-left:4px solid var(--vert)}
+  .list{margin-top:8px}
+  .row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid #eef1f5;font-size:14px}
+  .row:last-child{border-bottom:none}
+  .badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px}
+  .b-att{background:#fff4e0;color:#9a6b00}
+  .b-ok{background:#e9f6ee;color:var(--vert)}
+  .b-no{background:#fdeaea;color:var(--rouge)}
+  .hide{display:none}
+  footer{padding:14px;text-align:center;color:#9aa4b2;font-size:11px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><div class="brand">FoxEngine</div><div class="sub" id="hsub">Pointeuse salarié</div></div>
+    <button id="btnLogout" class="hide" onclick="logout()">Quitter</button>
+  </header>
+  <main>
+
+    <!-- ÉTAPE 1 : connexion -->
+    <section id="login" class="card">
+      <h1>Bonjour</h1>
+      <p style="font-size:14px;color:var(--gris);margin:2px 0 0">Choisissez votre boutique, votre nom, puis votre code.</p>
+      <label>Boutique</label>
+      <select id="selBoutique" onchange="loadSalaries()"></select>
+      <label>Votre nom</label>
+      <select id="selSalarie"><option value="">—</option></select>
+      <label>Votre code (PIN)</label>
+      <div class="pindots" id="pindots"></div>
+      <div class="pin" id="pinpad"></div>
+      <button class="btn" id="btnLogin" onclick="doLogin()" disabled>Se connecter</button>
+      <div id="loginMsg"></div>
+    </section>
+
+    <!-- ÉTAPE 2 : espace salarié -->
+    <section id="app" class="hide">
+      <div class="tabs">
+        <button id="tabPt" class="act" onclick="showTab('pt')">Pointer</button>
+        <button id="tabCg" onclick="showTab('cg')">Mes congés</button>
+      </div>
+
+      <!-- Pointer -->
+      <div id="panelPt">
+        <div class="card">
+          <div class="state" id="ptState">—</div>
+          <button class="big" id="btnPointer" onclick="pointer()">Pointer mon arrivée</button>
+          <div class="tiles" style="margin-top:16px">
+            <div class="tile"><div class="n" id="hSem">0 h</div><div class="l">cette semaine</div></div>
+            <div class="tile"><div class="n" id="hMois">0 h</div><div class="l">ce mois (cumul)</div></div>
+          </div>
+          <div id="ptMsg"></div>
+        </div>
+      </div>
+
+      <!-- Congés -->
+      <div id="panelCg" class="hide">
+        <div class="card">
+          <h1 style="font-size:16px">Nouvelle demande</h1>
+          <label>Type</label>
+          <select id="cgType">
+            <option value="conges_payes">Congés payés</option>
+            <option value="arret_maladie">Arrêt maladie</option>
+            <option value="absence">Absence</option>
+          </select>
+          <label>Du</label><input type="date" id="cgDebut">
+          <label>Au</label><input type="date" id="cgFin">
+          <label>Motif (facultatif)</label><input type="text" id="cgMotif" placeholder="Précisez si besoin">
+          <button class="btn" onclick="demanderConge()">Envoyer la demande</button>
+          <div id="cgMsg"></div>
+        </div>
+        <div class="card">
+          <h1 style="font-size:16px">Mes demandes</h1>
+          <div class="list" id="cgList"><div class="row">Chargement…</div></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+  <footer>FoxEngine · ReflexPrinting — votre temps de travail, simple et fiable.</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){
+  'use strict';
+  var SUPABASE_URL='https://cxbyblnzlivnadyhdwtz.supabase.co';
+  var SUPABASE_KEY='sb_publishable_XjTXt9N9A-zBhu6lZfrxXw_Hxwfi3wp';
+  var sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+  var S={boutique:'',salarie:'',nom:'',pin:'',enCours:false};
+
+  function $(id){return document.getElementById(id);}
+  function hmin(m){m=Math.max(0,Math.round(m||0));var h=Math.floor(m/60),r=m%60;return r?h+' h '+String(r).padStart(2,'0'):h+' h';}
+  function msg(el,txt,ok){el.innerHTML=txt?'<div class="msg '+(ok?'ok':'err')+'">'+txt+'</div>':'';}
+
+  // ---- PIN pad ----
+  function buildPad(){
+    var pad=$('pinpad');pad.innerHTML='';
+    ['1','2','3','4','5','6','7','8','9','C','0','⌫'].forEach(function(k){
+      var b=document.createElement('button');b.textContent=k;
+      b.onclick=function(){
+        if(k==='C'){S.pin='';}
+        else if(k==='⌫'){S.pin=S.pin.slice(0,-1);}
+        else if(S.pin.length<8){S.pin+=k;}
+        $('pindots').textContent='●'.repeat(S.pin.length);
+        $('btnLogin').disabled=!(S.salarie && S.pin.length>=3);
+      };
+      pad.appendChild(b);
+    });
+  }
+
+  async function loadBoutiques(){
+    var r=await sb.rpc('rpc_pt_boutiques_actives');
+    var sel=$('selBoutique');sel.innerHTML='';
+    if(r.error||!r.data||!r.data.length){sel.innerHTML='<option>Aucune boutique active</option>';return;}
+    r.data.forEach(function(b){var o=document.createElement('option');o.value=b.id;o.textContent=b.nom;sel.appendChild(o);});
+    S.boutique=r.data[0].id;loadSalaries();
+  }
+  window.loadSalaries=async function(){
+    S.boutique=$('selBoutique').value;S.salarie='';
+    var r=await sb.rpc('rpc_pt_salaries',{p_boutique:S.boutique});
+    var sel=$('selSalarie');sel.innerHTML='<option value="">—</option>';
+    if(!r.error&&r.data){r.data.forEach(function(s){var o=document.createElement('option');o.value=s.id;o.textContent=s.nom_complet;sel.appendChild(o);});}
+    sel.onchange=function(){S.salarie=sel.value;$('btnLogin').disabled=!(S.salarie&&S.pin.length>=3);};
+  };
+
+  window.doLogin=async function(){
+    msg($('loginMsg'),'',true);
+    var r=await sb.rpc('rpc_pt_login',{p_boutique:S.boutique,p_salarie:S.salarie,p_pin:S.pin});
+    if(r.error){msg($('loginMsg'),traduire(r.error),false);return;}
+    S.nom=r.data.nom;S.enCours=r.data.en_cours;
+    $('hsub').textContent=S.nom+' · '+$('selBoutique').selectedOptions[0].textContent;
+    $('login').classList.add('hide');$('app').classList.remove('hide');$('btnLogout').classList.remove('hide');
+    renderPt(r.data);
+    if(!r.data.peut_conges){$('tabCg').style.display='none';}
+    loadConges();
+  };
+
+  function renderPt(d){
+    S.enCours=d.en_cours;
+    $('hSem').textContent=hmin(d.semaine_min);
+    $('hMois').textContent=hmin(d.mois_min);
+    var b=$('btnPointer');
+    if(d.en_cours){b.textContent='Pointer mon départ';b.classList.add('out');$('ptState').innerHTML='Vous êtes <b>en service</b>.';}
+    else{b.textContent='Pointer mon arrivée';b.classList.remove('out');$('ptState').innerHTML='Vous êtes <b>hors service</b>.';}
+  }
+
+  window.pointer=async function(){
+    var b=$('btnPointer');b.disabled=true;
+    var r=await sb.rpc('rpc_pt_toggle',{p_boutique:S.boutique,p_salarie:S.salarie,p_pin:S.pin});
+    b.disabled=false;
+    if(r.error){msg($('ptMsg'),traduire(r.error),false);return;}
+    renderPt(r.data);
+    msg($('ptMsg'), r.data.action==='entree'?'Arrivée enregistrée. Bonne journée !':'Départ enregistré. À bientôt !', true);
+    setTimeout(function(){msg($('ptMsg'),'',true);},3500);
+  };
+
+  window.showTab=function(t){
+    $('tabPt').classList.toggle('act',t==='pt');$('tabCg').classList.toggle('act',t==='cg');
+    $('panelPt').classList.toggle('hide',t!=='pt');$('panelCg').classList.toggle('hide',t!=='cg');
+  };
+
+  window.demanderConge=async function(){
+    var p={p_boutique:S.boutique,p_salarie:S.salarie,p_pin:S.pin,
+      p_type:$('cgType').value,p_debut:$('cgDebut').value||null,p_fin:$('cgFin').value||null,p_motif:$('cgMotif').value||null};
+    if(!p.p_debut||!p.p_fin){msg($('cgMsg'),'Indiquez les dates de début et de fin.',false);return;}
+    var r=await sb.rpc('rpc_pt_conge',p);
+    if(r.error){msg($('cgMsg'),traduire(r.error),false);return;}
+    msg($('cgMsg'),'Demande envoyée. Votre responsable la validera.',true);
+    $('cgMotif').value='';loadConges();
+  };
+
+  var LBL={conges_payes:'Congés payés',arret_maladie:'Arrêt maladie',absence:'Absence'};
+  async function loadConges(){
+    var r=await sb.rpc('rpc_pt_mes_conges',{p_boutique:S.boutique,p_salarie:S.salarie,p_pin:S.pin});
+    var el=$('cgList');
+    if(r.error){el.innerHTML='<div class="row">Indisponible</div>';return;}
+    if(!r.data.length){el.innerHTML='<div class="row">Aucune demande.</div>';return;}
+    el.innerHTML=r.data.map(function(c){
+      var bcl=c.statut==='validee'?'b-ok':c.statut==='refusee'?'b-no':'b-att';
+      var btxt=c.statut==='validee'?'Validée':c.statut==='refusee'?'Refusée':'En attente';
+      return '<div class="row"><div>'+(LBL[c.type]||c.type)+'<br><span style="color:#9aa4b2;font-size:12px">'+
+        fdate(c.date_debut)+' → '+fdate(c.date_fin)+'</span></div><span class="badge '+bcl+'">'+btxt+'</span></div>';
+    }).join('');
+  }
+  function fdate(d){if(!d)return'';var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
+
+  window.logout=function(){S={boutique:$('selBoutique').value,salarie:'',nom:'',pin:'',enCours:false};
+    $('app').classList.add('hide');$('login').classList.remove('hide');$('btnLogout').classList.add('hide');
+    $('hsub').textContent='Pointeuse salarié';$('pindots').textContent='';$('selSalarie').value='';
+    $('btnLogin').disabled=true;msg($('loginMsg'),'',true);};
+
+  function traduire(e){
+    var m=(e&&e.message)||String(e);
+    if(m.indexOf('PIN_INVALIDE')>=0)return'Code incorrect.';
+    if(m.indexOf('SALARIE_INCONNU')>=0)return'Salarié introuvable pour cette boutique.';
+    if(m.indexOf('POINTEUSE_INACTIVE')>=0)return'La pointeuse n\'est pas activée pour cette boutique.';
+    if(m.indexOf('CONGES_NON_AUTORISES')>=0)return'Vous n\'êtes pas autorisé à demander des congés.';
+    if(m.indexOf('DATES_INVALIDES')>=0)return'Dates invalides.';
+    if(m.indexOf('TYPE_INVALIDE')>=0)return'Type de demande invalide.';
+    return'Une erreur est survenue. Réessayez.';
+  }
+
+  buildPad();loadBoutiques();
+})();
+</script>
+</body>
+</html>
