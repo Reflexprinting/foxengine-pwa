@@ -91,6 +91,7 @@
         <div class="card">
           <div class="state" id="ptState">—</div>
           <button class="big" id="btnPointer" onclick="pointer()">Pointer mon arrivée</button>
+          <div style="text-align:center;margin-top:10px"><a href="#" onclick="saisieManuelle();return false;" style="font-size:13px;color:var(--gris);text-decoration:underline">Caméra impossible ? Saisir le code</a></div>
           <div class="tiles" style="margin-top:16px">
             <div class="tile"><div class="n" id="hSem">0 h</div><div class="l">cette semaine</div></div>
             <div class="tile"><div class="n" id="hMois">0 h</div><div class="l">ce mois (cumul)</div></div>
@@ -199,7 +200,7 @@
   async function startScan(){
     SCAN.busy=false;
     if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
-      msg($('ptMsg'),'Ce navigateur bloque la caméra. Ouvrez la page directement dans Safari ou Chrome (pas depuis un navigateur intégré à une autre application).',false);
+      msg($('ptMsg'),'Ce navigateur bloque la caméra. Utilisez « Caméra impossible ? Saisir le code » sous le bouton.',false);
       return;
     }
     $('scanMsg').textContent='Placez le code dans le cadre…';
@@ -210,11 +211,11 @@
     }catch(e){
       $('scan').classList.add('hide');
       var t='Caméra inaccessible.';
-      if(e&&e.name==='NotAllowedError')t='Caméra refusée. Autorisez la caméra pour ce site dans les réglages du navigateur, puis réessayez.';
-      else if(e&&e.name==='NotFoundError')t='Aucune caméra détectée sur cet appareil.';
-      else if(e&&e.name==='NotReadableError')t='La caméra est déjà utilisée par une autre application. Fermez-la et réessayez.';
+      if(e&&e.name==='NotAllowedError')t='Caméra refusée. Autorisez la caméra pour ce site, ou utilisez « Saisir le code ».';
+      else if(e&&e.name==='NotFoundError')t='Aucune caméra détectée. Utilisez « Saisir le code ».';
+      else if(e&&e.name==='NotReadableError')t='La caméra est déjà utilisée par une autre application. Utilisez « Saisir le code ».';
       else if(e&&e.name==='SecurityError')t='La caméra nécessite une connexion sécurisée (https).';
-      else if(e&&e.message)t='Caméra inaccessible : '+e.name+'.';
+      else if(e&&e.message)t='Caméra inaccessible ('+e.name+'). Utilisez « Saisir le code ».';
       msg($('ptMsg'),t,false);
       return;
     }
@@ -313,8 +314,8 @@
     if(m.indexOf('PIN_INVALIDE')>=0)return'Code incorrect.';
     if(m.indexOf('SALARIE_INCONNU')>=0)return'Salarié introuvable pour cette boutique.';
     if(m.indexOf('POINTEUSE_INACTIVE')>=0)return'La pointeuse n\'est pas activée pour cette boutique.';
-    if(m.indexOf('PRESENCE_REFUSEE')>=0)return'Code de caisse invalide ou expiré. Rescannez le QR affiché à la caisse.';
-    if(m.indexOf('PRESENCE_REQUISE')>=0)return'Vous devez scanner le QR de la caisse pour pointer.';
+    if(m.indexOf('PRESENCE_REFUSEE')>=0)return'Code de caisse invalide ou expiré. Reprenez le code affiché à la caisse.';
+    if(m.indexOf('PRESENCE_REQUISE')>=0)return'Vous devez utiliser le code de la caisse pour pointer.';
     if(m.indexOf('CONGES_NON_AUTORISES')>=0)return'Vous n\'êtes pas autorisé à demander des congés.';
     if(m.indexOf('DATES_INVALIDES')>=0)return'Dates invalides.';
     if(m.indexOf('TYPE_INVALIDE')>=0)return'Type de demande invalide.';
